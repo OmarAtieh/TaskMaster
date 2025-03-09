@@ -909,3 +909,664 @@
   justify-content: center;
   margin-top: 1rem;
 }
+
+/* Progress View Styles */
+
+/* Filter bar */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  background-color: var(--surface);
+  padding: 1rem;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  min-width: 150px;
+  flex: 1;
+}
+
+.filter-group label {
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+  color: var(--on-surface);
+  opacity: 0.8;
+}
+
+.filter-select {
+  padding: 0.5rem;
+  border-radius: 4px;
+  border: 1px solid var(--divider);
+  background-color: var(--surface);
+  color: var(--on-surface);
+}
+
+.filter-reset {
+  align-self: flex-end;
+  background: none;
+  border: none;
+  color: var(--primary);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+}
+
+.filter-reset:hover {
+  background-color: var(--overlay);
+}
+
+.search-input {
+  width: 100%;
+  max-width: 300px;
+  padding: 0.5rem 1rem;
+  border-radius: 20px;
+  border: 1px solid var(--divider);
+  background-color: var(--surface);
+  color: var(--on-surface);
+}
+
+/* Section styling */
+.section-title {
+  font-size: 1.1rem;
+  margin: 1.5rem 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+.daily-missions-section, 
+.tasks-section {
+  margin-bottom: 2rem;
+}
+
+/* Mission styling */
+.mission-points,
+.task-points {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--primary);
+  margin-right: 0.75rem;
+}
+
+.mission-progress {
+  display: flex;
+  flex-direction: column;
+  margin-top: 1rem;
+}
+
+.mission-progress-text {
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+  color: var(--on-surface);
+  opacity: 0.8;
+}
+
+/* Stats summary */
+.stats-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.stats-summary .stat-card {
+  flex: 1;
+  min-width: 120px;
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--surface);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  text-align: center;
+}
+
+.stats-summary .stat-title {
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+}
+
+.stats-summary .stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--primary);
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .filter-bar {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .filter-group {
+    width: 100%;
+  }
+  
+  .filter-reset {
+    align-self: flex-start;
+    margin-top: 0.5rem;
+  }
+  
+  .stats-summary .stat-card {
+    flex-basis: calc(50% - 0.5rem);
+  }
+}
+
+/* Achievements View Styles */
+
+/* Achievement categories tabs */
+.achievement-categories {
+  display: flex;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+.category-tab {
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  position: relative;
+  transition: color 0.2s ease;
+}
+
+.category-tab:hover {
+  color: var(--primary);
+}
+
+.category-tab.active {
+  color: var(--primary);
+  font-weight: 500;
+}
+
+.category-tab.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background-color: var(--primary);
+}
+
+/* Level progress card */
+.level-progress-card {
+  background-color: var(--surface);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.level-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.level-container {
+  display: flex;
+  flex-direction: column;
+}
+
+.current-level {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.level-title {
+  font-size: 1.1rem;
+  color: var(--primary);
+  margin-top: 0.25rem;
+}
+
+.points-info {
+  text-align: right;
+}
+
+.total-points {
+  font-weight: 500;
+}
+
+.next-level {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  margin-top: 0.25rem;
+}
+
+.exp-bar-container {
+  height: 24px;
+  background-color: var(--divider);
+  border-radius: 12px;
+  overflow: hidden;
+  position: relative;
+}
+
+.exp-bar {
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 12px;
+}
+
+.exp-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: var(--on-primary);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.2);
+}
+
+/* Achievement cards */
+.achievement-card {
+  display: flex;
+  align-items: center;
+  background-color: var(--surface);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.achievement-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.15);
+}
+
+.achievement-card.locked {
+  opacity: 0.7;
+}
+
+.achievement-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 1rem;
+  font-size: 1.5rem;
+}
+
+.achievement-icon.large {
+  width: 64px;
+  height: 64px;
+  border-radius: 32px;
+  font-size: 2rem;
+}
+
+.achievement-content {
+  flex: 1;
+}
+
+.achievement-title {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+}
+
+.achievement-description {
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+  opacity: 0.8;
+}
+
+.achievement-progress {
+  display: flex;
+  align-items: center;
+}
+
+.achievement-progress .progress-bar {
+  flex: 1;
+  height: 6px;
+  background-color: var(--divider);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-right: 0.5rem;
+}
+
+.achievement-progress .progress-bar-fill {
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 3px;
+}
+
+.achievement-progress .progress-text {
+  font-size: 0.8rem;
+  min-width: 85px;
+  text-align: right;
+}
+
+.achievement-reward {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--primary);
+  margin-left: 1rem;
+  white-space: nowrap;
+}
+
+/* Achievement details dialog */
+.achievement-details-dialog {
+  max-width: 500px;
+}
+
+.achievement-details-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.achievement-info {
+  flex: 1;
+  margin-left: 1rem;
+}
+
+.achievement-info h3 {
+  margin: 0;
+  margin-bottom: 0.25rem;
+}
+
+.achievement-rarity {
+  color: var(--primary);
+  font-size: 0.9rem;
+}
+
+.achievement-details-description {
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+}
+
+.achievement-progress-details {
+  margin-bottom: 1.5rem;
+}
+
+.progress-label {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.achievement-rewards h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+.reward-item {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.reward-icon {
+  width: 32px;
+  height: 32px;
+  background-color: rgba(var(--primary-rgb), 0.1);
+  color: var(--primary);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 0.75rem;
+}
+
+.reward-name {
+  font-weight: 500;
+}
+
+.reward-value {
+  font-size: 0.9rem;
+  opacity: 0.8;
+}
+
+.achievement-unlock-info {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--divider);
+  font-style: italic;
+  opacity: 0.8;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .level-info {
+    flex-direction: column;
+  }
+  
+  .points-info {
+    text-align: left;
+    margin-top: 0.75rem;
+  }
+  
+  .achievement-categories {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .category-tab {
+    white-space: nowrap;
+  }
+}
+
+/* Mobile Optimization Styles */
+
+/* Ensure proper viewport behavior on mobile */
+html, body {
+  height: 100%;
+  width: 100%;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Improve touch targets */
+button, .tab, .nav-item, select, .task-card, .mission-card, .achievement-card {
+  touch-action: manipulation;
+}
+
+button, .form-control, .tab, .nav-item {
+  min-height: 44px; /* Minimum touch target size */
+}
+
+/* Make dialogs more mobile-friendly */
+@media (max-width: 768px) {
+  .dialog {
+    width: 95%;
+    max-height: 85vh;
+  }
+  
+  .overlay {
+    padding: 1rem;
+  }
+  
+  /* Better form layouts on mobile */
+  .form-row {
+    flex-direction: column;
+  }
+  
+  .form-row .col-6 {
+    width: 100%;
+    padding: 0;
+  }
+  
+  /* More compact task cards */
+  .task-card, .mission-card {
+    padding-right: 0.5rem;
+  }
+  
+  /* Ensure add button stays visible */
+  .fab {
+    bottom: 70px; /* Above bottom navigation */
+  }
+  
+  /* Adjust filter bar for touch */
+  .filter-group select,
+  .search-input {
+    height: 44px;
+  }
+}
+
+/* Adjust for Android soft keyboard */
+@media (max-height: 500px) {
+  .dialog {
+    max-height: 95vh;
+  }
+}
+
+/* Settings View Styles */
+
+.settings-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.settings-section {
+  background-color: var(--surface);
+  border-radius: 8px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.settings-section-title {
+  display: flex;
+  align-items: center;
+  margin-top: 0;
+  margin-bottom: 1.25rem;
+  font-size: 1.1rem;
+  color: var(--primary);
+}
+
+.settings-icon {
+  margin-right: 0.75rem;
+  font-size: 1.25rem;
+}
+
+.setting-item {
+  margin-bottom: 1.25rem;
+}
+
+.setting-item:last-child {
+  margin-bottom: 0;
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.switch-label {
+  margin-right: 1rem;
+}
+
+/* Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 24px;
+}
+
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--divider);
+  transition: .4s;
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px;
+  width: 18px;
+  left: 3px;
+  bottom: 3px;
+  background-color: white;
+  transition: .4s;
+}
+
+input:checked + .slider {
+  background-color: var(--primary);
+}
+
+input:checked + .slider:before {
+  transform: translateX(26px);
+}
+
+.slider.round {
+  border-radius: 34px;
+}
+
+.slider.round:before {
+  border-radius: 50%;
+}
+
+/* Status indicator */
+.status-indicator {
+  display: flex;
+  align-items: center;
+  margin-top: 0.25rem;
+}
+
+.status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+}
+
+.status-dot.connected {
+  background-color: #4CAF50;
+}
+
+.status-dot.disconnected {
+  background-color: #F44336;
+}
+
+/* Danger zone */
+.danger-zone {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--divider);
+}
+
+.danger-zone h4 {
+  color: var(--error);
+  margin-top: 0;
+  margin-bottom: 1rem;
+}
+
+/* Mobile adjustments */
+@media (max-width: 768px) {
+  .setting-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .switch {
+    margin-top: 0.5rem;
+  }
+  
+  .settings-section {
+    padding: 1rem;
+  }
+}
