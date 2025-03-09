@@ -1,28 +1,31 @@
+//GitHub Pages aware service workers
+const BASE_PATH = location.pathname.slice(0, location.pathname.lastIndexOf('/'));
+
 // Service Worker for offline functionality
 
 const CACHE_NAME = 'taskmaster-v1';
 const ASSETS_TO_CACHE = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-  '/css/styles.css',
-  '/css/themes.css',
-  '/css/animations.css',
-  '/js/app.js',
-  '/js/storage-manager.js',
-  '/js/graphics.js',
-  '/js/sound-effects.js',
-  '/js/task-manager.js',
-  '/js/category-manager.js',
-  '/js/sync-manager.js',
-  '/js/notification-manager.js',
-  '/js/gamification-system.js',
-  '/js/ui-manager.js',
-  '/views/tasks.js',
-  '/views/daily.js',
-  '/views/progress.js',
-  '/views/achievements.js',
-  '/views/settings.js'
+  '${BASE_PATH}/',
+  '${BASE_PATH}/index.html',
+  '${BASE_PATH}/manifest.json',
+  '${BASE_PATH}/css/styles.css',
+  '${BASE_PATH}/css/themes.css',
+  '${BASE_PATH}/css/animations.css',
+  '${BASE_PATH}/js/app.js',
+  '${BASE_PATH}/js/storage-manager.js',
+  '${BASE_PATH}/js/graphics.js',
+  '${BASE_PATH}/js/sound-effects.js',
+  '${BASE_PATH}/js/task-manager.js',
+  '${BASE_PATH}/js/category-manager.js',
+  '${BASE_PATH}/js/sync-manager.js',
+  '${BASE_PATH}/js/notification-manager.js',
+  '${BASE_PATH}/js/gamification-system.js',
+  '${BASE_PATH}/js/ui-manager.js',
+  '${BASE_PATH}/views/tasks.js',
+  '${BASE_PATH}/views/daily.js',
+  '${BASE_PATH}/views/progress.js',
+  '${BASE_PATH}/views/achievements.js',
+  '${BASE_PATH}/views/settings.js'
 ];
 
 // Install event - cache assets

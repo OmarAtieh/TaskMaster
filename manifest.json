@@ -2,7 +2,7 @@
     "name": "TaskMaster",
     "short_name": "TaskMaster",
     "description": "Task management with gamification and Google Sheets sync",
-    "start_url": "/",
+    "start_url": "./",
     "display": "standalone",
     "background_color": "#f5f5f7",
     "theme_color": "#4a6fa5",
