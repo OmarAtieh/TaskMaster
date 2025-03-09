@@ -94,23 +94,23 @@ class TaskForm {
       }
       
       // Generate HTML for task details view
-      generateDetailsHtml(task) {
+    generateDetailsHtml(task) {
         // Get category and subcategory names
         let categoryName = 'Uncategorized';
         let subcategoryName = '';
         
         if (task.category_id) {
-          const category = this.app.categories.getCategory(task.category_id);
-          if (category) {
+        const category = this.app.categories.getCategory(task.category_id);
+        if (category) {
             categoryName = category.name;
             
             if (task.subcategory_id) {
-              const subcategory = category.subcategories?.find(s => s.id === task.subcategory_id);
-              if (subcategory) {
+            const subcategory = category.subcategories?.find(s => s.id === task.subcategory_id);
+            if (subcategory) {
                 subcategoryName = subcategory.name;
-              }
             }
-          }
+            }
+        }
         }
         
         // Format dates
@@ -123,177 +123,224 @@ class TaskForm {
         let progressHtml = '';
         
         if (task.status === 'completed') {
-          statusText = 'Completed';
-          
-          if (task.completed_at) {
+        statusText = 'Completed';
+        
+        if (task.completed_at) {
             statusText += ` on ${new Date(task.completed_at).toLocaleString()}`;
-          }
+        }
         } else if (task.status === 'in_progress') {
-          statusText = 'In Progress';
-          
-          if (task.progress_type === 'incremental') {
+        statusText = 'In Progress';
+        
+        if (task.progress_type === 'incremental') {
             progressHtml = `
-              <div class="progress-bar-large">
+            <div class="progress-bar-large">
                 <div class="progress-bar-fill" style="width: ${task.progress_percentage}%"></div>
                 <span class="progress-text">${task.progress_percentage}%</span>
-              </div>
+            </div>
             `;
-          }
+        }
+        }
+        
+        // Add progress adjustment controls for incremental tasks
+        if (task.progress_type === 'incremental' && task.status !== 'completed') {
+        progressHtml += `
+            <div class="progress-adjust-controls">
+            <button class="progress-adjust-btn" data-adjust="-10">-10%</button>
+            <button class="progress-adjust-btn" data-adjust="-5">-5%</button>
+            <input type="range" id="progress-slider" min="0" max="100" step="5" value="${task.progress_percentage}">
+            <button class="progress-adjust-btn" data-adjust="+5">+5%</button>
+            <button class="progress-adjust-btn" data-adjust="+10">+10%</button>
+            <span id="progress-value">${task.progress_percentage}%</span>
+            </div>
+        `;
         }
         
         // Recurrence info
         let recurrenceText = 'No';
         if (task.is_recurring && task.recurrence_pattern) {
-          const pattern = task.recurrence_pattern;
-          const interval = pattern.interval || 1;
-          
-          switch (pattern.type) {
+        const pattern = task.recurrence_pattern;
+        const interval = pattern.interval || 1;
+        
+        switch (pattern.type) {
             case 'daily':
-              recurrenceText = `Yes, every ${interval} day${interval > 1 ? 's' : ''}`;
-              break;
+            recurrenceText = `Yes, every ${interval} day${interval > 1 ? 's' : ''}`;
+            break;
             case 'weekly':
-              recurrenceText = `Yes, every ${interval} week${interval > 1 ? 's' : ''}`;
-              break;
+            recurrenceText = `Yes, every ${interval} week${interval > 1 ? 's' : ''}`;
+            break;
             case 'monthly':
-              recurrenceText = `Yes, every ${interval} month${interval > 1 ? 's' : ''}`;
-              break;
+            recurrenceText = `Yes, every ${interval} month${interval > 1 ? 's' : ''}`;
+            break;
             default:
-              recurrenceText = 'Yes';
-          }
+            recurrenceText = 'Yes';
+        }
         }
         
         return `
-          <div class="dialog task-details-dialog">
+        <div class="dialog task-details-dialog">
             <div class="dialog-header">
-              <h2>Task Details</h2>
-              <button type="button" class="close-button" id="close-details">×</button>
+            <h2>Task Details</h2>
+            <button type="button" class="close-button" id="close-details">×</button>
             </div>
             
             <div class="dialog-content">
-              <div class="task-details-header">
+            <div class="task-details-header">
                 <h3 class="task-details-title">${task.title}</h3>
                 <div class="task-badges">
-                  <span class="badge priority-badge priority-${task.priority}">P${task.priority}</span>
-                  <span class="badge difficulty-badge difficulty-${task.difficulty}">D${task.difficulty}</span>
+                <span class="badge priority-badge priority-${task.priority}">P${task.priority}</span>
+                <span class="badge difficulty-badge difficulty-${task.difficulty}">D${task.difficulty}</span>
                 </div>
-              </div>
-              
-              ${task.description ? `<p class="task-description">${task.description}</p>` : ''}
-              
-              ${progressHtml}
-              
-              <div class="detail-section">
+            </div>
+            
+            ${task.description ? `<p class="task-description">${task.description}</p>` : ''}
+            
+            ${progressHtml}
+            
+            <div class="detail-section">
                 <div class="detail-row">
-                  <div class="detail-label">Status:</div>
-                  <div class="detail-value">${statusText}</div>
+                <div class="detail-label">Status:</div>
+                <div class="detail-value">${statusText}</div>
                 </div>
                 
                 <div class="detail-row">
-                  <div class="detail-label">Category:</div>
-                  <div class="detail-value">${categoryName}</div>
+                <div class="detail-label">Category:</div>
+                <div class="detail-value">${categoryName}</div>
                 </div>
                 
                 ${subcategoryName ? `
-                  <div class="detail-row">
+                <div class="detail-row">
                     <div class="detail-label">Subcategory:</div>
                     <div class="detail-value">${subcategoryName}</div>
-                  </div>
+                </div>
                 ` : ''}
                 
                 <div class="detail-row">
-                  <div class="detail-label">Due Date:</div>
-                  <div class="detail-value">${formattedDueDate}</div>
+                <div class="detail-label">Due Date:</div>
+                <div class="detail-value">${formattedDueDate}</div>
                 </div>
                 
                 <div class="detail-row">
-                  <div class="detail-label">Due Time:</div>
-                  <div class="detail-value">${formattedDueTime}</div>
+                <div class="detail-label">Due Time:</div>
+                <div class="detail-value">${formattedDueTime}</div>
                 </div>
                 
                 <div class="detail-row">
-                  <div class="detail-label">Estimated Time:</div>
-                  <div class="detail-value">${task.estimated_minutes} minutes</div>
+                <div class="detail-label">Estimated Time:</div>
+                <div class="detail-value">${task.estimated_minutes} minutes</div>
                 </div>
                 
                 <div class="detail-row">
-                  <div class="detail-label">Recurring:</div>
-                  <div class="detail-value">${recurrenceText}</div>
+                <div class="detail-label">Recurring:</div>
+                <div class="detail-value">${recurrenceText}</div>
                 </div>
                 
                 <div class="detail-row">
-                  <div class="detail-label">Created:</div>
-                  <div class="detail-value">${formattedCreatedDate}</div>
+                <div class="detail-label">Created:</div>
+                <div class="detail-value">${formattedCreatedDate}</div>
                 </div>
                 
                 ${task.notes ? `
-                  <div class="detail-section">
+                <div class="detail-section">
                     <h4>Notes</h4>
                     <p>${task.notes}</p>
-                  </div>
+                </div>
                 ` : ''}
-              </div>
+            </div>
             </div>
             
             <div class="dialog-actions">
-              ${task.status !== 'completed' ? `
+            ${task.status !== 'completed' ? `
                 <button type="button" id="complete-task" class="secondary-button">Mark Complete</button>
-              ` : ''}
-              <button type="button" id="edit-task" class="secondary-button">Edit Task</button>
-              <button type="button" id="delete-task" class="danger-button">Delete</button>
+            ` : ''}
+            <button type="button" id="edit-task" class="secondary-button">Edit Task</button>
+            <button type="button" id="delete-task" class="danger-button">Delete</button>
             </div>
-          </div>
+        </div>
         `;
-      }
+    }
       
       // Initialize controls for task details
-      initializeDetailsControls(task) {
+    initializeDetailsControls(task) {
         // Close button
         document.getElementById('close-details')?.addEventListener('click', () => {
-          this.closeForm();
+        this.closeForm();
+        });
+        
+        // Progress slider for incremental tasks
+        const progressSlider = document.getElementById('progress-slider');
+        if (progressSlider) {
+        progressSlider.addEventListener('input', (e) => {
+            const value = e.target.value;
+            document.getElementById('progress-value').textContent = value + '%';
+        });
+        
+        progressSlider.addEventListener('change', async (e) => {
+            const newValue = parseInt(e.target.value, 10);
+            await this.app.tasks.updateTask(task.id, {
+            progress_percentage: newValue
+            });
+        });
+        }
+        
+        // Progress adjustment buttons
+        document.querySelectorAll('.progress-adjust-btn').forEach(btn => {
+        btn.addEventListener('click', async () => {
+            const adjustment = parseInt(btn.dataset.adjust, 10);
+            const newValue = Math.min(100, Math.max(0, task.progress_percentage + adjustment));
+            
+            if (progressSlider) {
+            progressSlider.value = newValue;
+            document.getElementById('progress-value').textContent = newValue + '%';
+            }
+            
+            await this.app.tasks.updateTask(task.id, {
+            progress_percentage: newValue
+            });
+        });
         });
         
         // Complete button
         const completeBtn = document.getElementById('complete-task');
         if (completeBtn && task.status !== 'completed') {
-          completeBtn.addEventListener('click', async () => {
+        completeBtn.addEventListener('click', async () => {
             try {
-              await this.app.tasks.updateTask(task.id, {
+            await this.app.tasks.updateTask(task.id, {
                 status: 'completed',
                 progress_percentage: 100
-              });
-              
-              // Close dialog
-              this.closeForm();
-              
-              // Refresh task list
-              if (window.TasksView && this.app.ui.views.tasks) {
+            });
+            
+            // Close dialog
+            this.closeForm();
+            
+            // Refresh task list
+            if (window.TasksView && this.app.ui.views.tasks) {
                 this.app.ui.views.tasks.refreshTaskList();
-              }
-              
-              // Play sound
-              if (this.app.sound && this.app.preferences.soundEnabled) {
-                this.app.sound.play('taskComplete');
-              }
-            } catch (error) {
-              console.error('Error completing task:', error);
-              alert('Error completing task: ' + error.message);
             }
-          });
+            
+            // Play sound
+            if (this.app.sound && this.app.preferences.soundEnabled) {
+                this.app.sound.play('taskComplete');
+            }
+            } catch (error) {
+            console.error('Error completing task:', error);
+            alert('Error completing task: ' + error.message);
+            }
+        });
         }
         
         // Edit button
         document.getElementById('edit-task')?.addEventListener('click', () => {
-          this.closeForm();
-          this.showEditForm(task.id);
+        this.closeForm();
+        this.showEditForm(task.id);
         });
         
         // Delete button
         document.getElementById('delete-task')?.addEventListener('click', () => {
-          if (confirm('Are you sure you want to delete this task? This cannot be undone.')) {
+        if (confirm('Are you sure you want to delete this task? This cannot be undone.')) {
             this.deleteTask(task.id);
-          }
+        }
         });
-      }
+    }
       
       // Delete a task
       async deleteTask(taskId) {
