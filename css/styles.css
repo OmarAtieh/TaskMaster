@@ -378,3 +378,155 @@
   margin-bottom: 2rem;
   max-width: 500px;
 }
+
+/* Task card styles */
+
+.task-card {
+  background-color: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  overflow: hidden;
+  display: flex;
+  position: relative;
+  margin-bottom: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  min-height: 64px;
+}
+
+.task-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+}
+
+.priority-indicator {
+  width: 6px;
+  height: 100%;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+
+.priority-1 {
+  background-color: var(--priority-p1);
+}
+
+.priority-2 {
+  background-color: var(--priority-p2);
+}
+
+.priority-3 {
+  background-color: var(--priority-p3);
+}
+
+.priority-4 {
+  background-color: var(--priority-p4);
+}
+
+.priority-5 {
+  background-color: var(--priority-p5);
+}
+
+.task-content {
+  flex: 1;
+  padding: 12px 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  margin-left: 6px; /* Space for priority indicator */
+}
+
+.task-title {
+  font-weight: 500;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.task-details {
+  font-size: 0.85rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+}
+
+.task-actions {
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+}
+
+.task-complete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--divider);
+  background-color: var(--surface);
+  color: var(--primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 1rem;
+}
+
+.task-complete-btn:hover {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.task-completed {
+  opacity: 0.6;
+}
+
+.task-completed .task-title {
+  text-decoration: line-through;
+}
+
+.task-overdue .task-details {
+  color: var(--error);
+}
+
+.progress-bar-container {
+  height: 6px;
+  background-color: var(--divider);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 8px;
+  position: relative;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.progress-text {
+  position: absolute;
+  right: 0;
+  top: -18px;
+  font-size: 0.75rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+}
+
+/* Task completion animation */
+@keyframes taskComplete {
+  0% { transform: scale(1); opacity: 1; }
+  10% { transform: scale(1.02); }
+  30% { opacity: 0.7; }
+  100% { transform: translateX(100%); opacity: 0; }
+}
+
+.task-card.task-complete {
+  animation: taskComplete 0.5s ease forwards;
+  pointer-events: none;
+}
+
+/* Empty state */
+.empty-state {
+  padding: 2rem;
+  text-align: center;
+  color: var(--on-surface);
+  opacity: 0.7;
+}
