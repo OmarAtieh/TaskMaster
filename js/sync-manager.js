@@ -1,136 +1,241 @@
 // sync-manager.js - Google Sheets synchronization
 
 class SyncManager {
-    constructor(app) {
-        this.app = app;
-        this.storage = app.storage;
-        this.isAuthorized = false;
-        this.syncInterval = null;
-        this.gapi = null;
-        this.spreadsheetId = null;
-        
-        // We'll retrieve these from storage instead of hardcoding them
-        this.CLIENT_ID = null;
-        this.API_KEY = null;
-        
-        // Define API scopes needed
-        this.SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
-        this.DISCOVERY_DOCS = [
-          'https://sheets.googleapis.com/$discovery/rest?version=v4',
-          'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
-        ];
-      }
+    // Updated SyncManager with Google Identity Services
+
+class SyncManager {
+  constructor(app) {
+      this.app = app;
+      this.storage = app.storage;
+      this.isAuthorized = false;
+      this.syncInterval = null;
+      this.gapi = null;
+      this.tokenClient = null;
+      this.spreadsheetId = null;
       
-      // Add a new method to load credentials
-        async loadCredentials() {
-            try {
-            // Load credentials from storage
-            this.CLIENT_ID = await this.storage.get('google_client_id');
-            this.API_KEY = await this.storage.get('google_api_key');
-            
-            return !!this.CLIENT_ID && !!this.API_KEY;
-            } catch (error) {
-            console.error('Error loading Google API credentials:', error);
-            return false;
-            }
-        }
+      // We'll retrieve these from storage instead of hardcoding them
+      this.CLIENT_ID = null;
+      this.API_KEY = null;
+      
+      // Define API scopes needed
+      this.SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+      this.DISCOVERY_DOCS = [
+        'https://sheets.googleapis.com/$discovery/rest?version=v4',
+        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+      ];
+  }
     
-    // Load the Google API client
-    async loadGoogleApi() {
+  // Load credentials from storage
+  async loadCredentials() {
+      try {
+          // Load credentials from storage
+          this.CLIENT_ID = await this.storage.get('google_client_id');
+          this.API_KEY = await this.storage.get('google_api_key');
+          
+          return !!this.CLIENT_ID && !!this.API_KEY;
+      } catch (error) {
+          console.error('Error loading Google API credentials:', error);
+          return false;
+      }
+  }
+  
+  // Load the Google API client and Identity Services library
+  async loadGoogleApi() {
       // First ensure we have credentials
       const hasCredentials = await this.loadCredentials();
       if (!hasCredentials) {
-        throw new Error('Google API credentials not configured. Please add them in Settings.');
+          throw new Error('Google API credentials not configured. Please add them in Settings.');
       }
       
       return new Promise((resolve, reject) => {
-        // If gapi is already loaded
-        if (window.gapi) {
-          this.gapi = window.gapi;
-          resolve(this.gapi);
-          return;
-        }
-        
-        // Load the Google API client script
-        const script = document.createElement('script');
-        script.src = 'https://apis.google.com/js/api.js';
-        script.async = true;
-        script.defer = true;
-        script.onload = () => {
-          this.gapi = window.gapi;
-          this.gapi.load('client:auth2', () => {
-            resolve(this.gapi);
+          // Load both Google API JS and Identity Services
+          const gapiLoaded = new Promise((gapiResolve) => {
+              // If gapi is already loaded
+              if (window.gapi) {
+                  this.gapi = window.gapi;
+                  gapiResolve();
+                  return;
+              }
+              
+              // Load the Google API client script
+              const script = document.createElement('script');
+              script.src = 'https://apis.google.com/js/api.js';
+              script.async = true;
+              script.defer = true;
+              script.onload = () => {
+                  this.gapi = window.gapi;
+                  this.gapi.load('client', gapiResolve);
+              };
+              script.onerror = () => {
+                  reject(new Error('Error loading Google API script'));
+              };
+              
+              document.body.appendChild(script);
           });
-        };
-        script.onerror = () => {
-          reject(new Error('Error loading Google API script'));
-        };
-        
-        document.body.appendChild(script);
+          
+          const gisLoaded = new Promise((gisResolve) => {
+              // If Google Identity Services is already loaded
+              if (window.google && window.google.accounts) {
+                  gisResolve();
+                  return;
+              }
+              
+              // Load the Google Identity Services script
+              const script = document.createElement('script');
+              script.src = 'https://accounts.google.com/gsi/client';
+              script.async = true;
+              script.defer = true;
+              script.onload = gisResolve;
+              script.onerror = () => {
+                  reject(new Error('Error loading Google Identity Services script'));
+              };
+              
+              document.body.appendChild(script);
+          });
+          
+          // Wait for both libraries to load
+          Promise.all([gapiLoaded, gisLoaded])
+              .then(() => resolve())
+              .catch(error => reject(error));
       });
-    }
-    
-    // Authorize with Google
-    async authorize() {
+  }
+  
+  // Initialize the Google API client
+  async initializeGapiClient() {
+      await this.gapi.client.init({
+          apiKey: this.API_KEY,
+          discoveryDocs: this.DISCOVERY_DOCS
+      });
+  }
+  
+  // Initialize the Token Client for OAuth
+  initializeTokenClient() {
+      this.tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: this.CLIENT_ID,
+          scope: this.SCOPES,
+          callback: (tokenResponse) => {
+              if (tokenResponse && tokenResponse.access_token) {
+                  // Token received successfully
+                  this.isAuthorized = true;
+                  // You can store the token or just use it directly
+                  console.log('Successfully obtained access token');
+              }
+          },
+          error_callback: (error) => {
+              console.error('Error obtaining access token:', error);
+              this.isAuthorized = false;
+          }
+      });
+  }
+  
+  // Authorize with Google
+  async authorize() {
       try {
-        // Check if we have credentials
-        const hasCredentials = await this.loadCredentials();
-        if (!hasCredentials) {
+          // Check if we have credentials
+          const hasCredentials = await this.loadCredentials();
+          if (!hasCredentials) {
+              this.isAuthorized = false;
+              return { 
+                  success: false, 
+                  reason: 'missing_credentials',
+                  message: 'Google API credentials not configured.' 
+              };
+          }
+          
+          // Load the required libraries
+          await this.loadGoogleApi();
+          
+          // Initialize the GAPI client
+          await this.initializeGapiClient();
+          
+          // Initialize the token client if needed
+          if (!this.tokenClient) {
+              this.initializeTokenClient();
+          }
+          
+          // Check if we're already authorized by checking for an existing token
+          try {
+              const tokenCheck = await this.gapi.client.sheets.spreadsheets.get({
+                  spreadsheetId: 'dummy-id-for-test'
+              });
+              
+              // If we get here without an error, we already have a valid token
+              this.isAuthorized = true;
+              console.log('User already has a valid token');
+              
+              // Get the spreadsheet ID from storage
+              this.spreadsheetId = await this.storage.get('spreadsheet_id');
+              
+              return { success: true };
+          } catch (error) {
+              // If error code is 401 or 403, we need a new token
+              if (error.status === 401 || error.status === 403) {
+                  // Request a new access token
+                  this.tokenClient.requestAccessToken();
+                  
+                  // This is asynchronous - we'll need to wait for the callback
+                  return new Promise((resolve) => {
+                      // Set up a timeout in case authorization takes too long
+                      const timeout = setTimeout(() => {
+                          resolve({ 
+                              success: false, 
+                              reason: 'auth_timeout',
+                              message: 'Authorization timed out' 
+                          });
+                      }, 60000); // 1 minute timeout
+                      
+                      // Set up an interval to check if we've been authorized
+                      const interval = setInterval(() => {
+                          if (this.isAuthorized) {
+                              clearTimeout(timeout);
+                              clearInterval(interval);
+                              this.getSpreadsheetId().then(() => {
+                                  resolve({ success: true });
+                              });
+                          }
+                      }, 500); // Check every 500ms
+                  });
+              } else if (error.status === 404) {
+                  // This is expected with our dummy ID - it means we have a valid token
+                  this.isAuthorized = true;
+                  console.log('User has a valid token');
+                  
+                  // Get the spreadsheet ID from storage
+                  this.spreadsheetId = await this.storage.get('spreadsheet_id');
+                  
+                  return { success: true };
+              } else {
+                  // Some other error
+                  console.error('Error checking authorization:', error);
+                  return { 
+                      success: false, 
+                      reason: 'auth_error',
+                      message: 'Failed to check authorization: ' + error.message 
+                  };
+              }
+          }
+      } catch (error) {
+          console.error('Google authorization failed:', error);
           this.isAuthorized = false;
           return { 
-            success: false, 
-            reason: 'missing_credentials',
-            message: 'Google API credentials not configured.' 
+              success: false, 
+              reason: 'auth_error',
+              message: 'Failed to authorize with Google: ' + error.message 
           };
-        }
-    
-        // Load Google API if not already loaded
-        await this.loadGoogleApi();
-        
-        // Initialize the client BEFORE checking auth status
-        await this.gapi.client.init({
-          apiKey: this.API_KEY,
-          clientId: this.CLIENT_ID,
-          discoveryDocs: this.DISCOVERY_DOCS,
-          scope: this.SCOPES,
-          // Add an explicit redirect URI that matches your Google Cloud Console setting
-          // Replace this with your actual GitHub Pages URL if different
-          redirect_uri: 'https://omaratieh.github.io/TaskMaster/'
-        });
-        
-        // Continue with authorization check
-        if (this.gapi.auth2.getAuthInstance().isSignedIn.get()) {
-          this.isAuthorized = true;
-          console.log('User is already signed in to Google');
-          
-          // Get the spreadsheet ID from storage or create new sheet
-          this.spreadsheetId = await this.storage.get('spreadsheet_id');
-          
-          return { success: true };
-        }
-        
-        // Use signIn with additional options for more control
-        const options = {
-          prompt: 'select_account'  // Force account selection to avoid login issues
-        };
-        
-        await this.gapi.auth2.getAuthInstance().signIn(options);
-        this.isAuthorized = true;
-        
-        // Check if we have a spreadsheet ID stored
-        this.spreadsheetId = await this.storage.get('spreadsheet_id');
-        
-        return { success: true };
-      } catch (error) {
-        console.error('Google authorization failed:', error);
-        this.isAuthorized = false;
-        return { 
-          success: false, 
-          reason: 'auth_error',
-          message: 'Failed to authorize with Google: ' + error.message 
-        };
       }
-    }
+  }
+  
+  // Get spreadsheet ID from storage or create a new one
+  async getSpreadsheetId() {
+      this.spreadsheetId = await this.storage.get('spreadsheet_id');
+      if (!this.spreadsheetId) {
+          // If we don't have a spreadsheet ID, create a new one
+          console.log('No spreadsheet ID found, creating a new one');
+          await this.createNewSpreadsheet();
+      }
+      return this.spreadsheetId;
+  }
+  
     
     // Initialize Google Sheets for the app
     async initializeSheets() {
