@@ -521,6 +521,107 @@ class UIManager {
         prompt.remove();
       });
     }
+    showCredentialsForm() {
+      // Replace the loading screen with credentials form
+      this.appElement.innerHTML = `
+        <div class="credentials-container">
+          <div class="credentials-header">
+            <div class="app-logo">${this.graphics.getAppLogo(80)}</div>
+            <h1>Google API Setup Required</h1>
+          </div>
+          
+          <div class="credentials-content">
+            <p>TaskMaster needs Google API credentials to sync with Google Sheets.</p>
+            <p>You only need to set this up once.</p>
+            
+            <div class="form-group">
+              <label for="google-client-id">Client ID:</label>
+              <input type="text" id="google-client-id" class="form-control" placeholder="Your Google OAuth 2.0 Client ID">
+            </div>
+            
+            <div class="form-group">
+              <label for="google-api-key">API Key:</label>
+              <input type="text" id="google-api-key" class="form-control" placeholder="Your Google API Key">
+            </div>
+            
+            <div class="help-text">
+              <strong>How to get credentials:</strong>
+              <ol>
+                <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                <li>Create a project</li>
+                <li>Enable Google Sheets API and Google Drive API</li>
+                <li>Create OAuth 2.0 credentials and an API Key</li>
+                <li>Add your domain to authorized JavaScript origins</li>
+              </ol>
+            </div>
+            
+            <div class="credentials-actions">
+              <button id="save-credentials-btn" class="primary-button">Save Credentials</button>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      // Add event listener for the save button
+      document.getElementById('save-credentials-btn').addEventListener('click', async () => {
+        const clientId = document.getElementById('google-client-id').value.trim();
+        const apiKey = document.getElementById('google-api-key').value.trim();
+        
+        if (!clientId || !apiKey) {
+          alert('Please enter both Google API credentials to continue.');
+          return;
+        }
+        
+        try {
+          // Show loading message
+          this.showLoadingOverlay('Saving credentials...');
+          
+          // Save credentials
+          await this.app.storage.set('google_client_id', clientId);
+          await this.app.storage.set('google_api_key', apiKey);
+          
+          // Update sync manager
+          this.app.sync.CLIENT_ID = clientId;
+          this.app.sync.API_KEY = apiKey;
+          
+          // Try to authorize with the new credentials
+          this.showLoadingOverlay('Connecting to Google...');
+          const authResult = await this.app.sync.authorize();
+          
+          if (!authResult.success) {
+            alert('Credentials saved, but authorization failed: ' + authResult.message);
+            // Reload to try again
+            window.location.reload();
+            return;
+          }
+          
+          // Continue with startup
+          await this.app.normalStartup();
+        } catch (error) {
+          console.error('Error saving credentials:', error);
+          alert('Error saving credentials: ' + error.message);
+        }
+      });
+    }
+    
+    // Add a helper method to show loading overlay
+    showLoadingOverlay(message) {
+      // Create or update loading overlay
+      let overlay = document.querySelector('.loading-overlay');
+      
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        document.body.appendChild(overlay);
+      }
+      
+      overlay.innerHTML = `
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <p>${message}</p>
+        </div>
+      `;
+    }
     
     // Update connection status indicator
     updateConnectionStatus(isOnline) {

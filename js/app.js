@@ -153,6 +153,23 @@ class TaskMasterApp {
     
     async normalStartup() {
         try {
+            this.showLoadingMessage('Checking authorization...');
+    
+            // Try to authorize
+            const authResult = await this.sync.authorize();
+            
+            // If not authorized due to missing credentials, show the credentials form
+            if (!authResult.success && authResult.reason === 'missing_credentials') {
+            this.ui.showCredentialsForm();
+            return;
+            }
+            
+            // If not authorized for some other reason, show error
+            if (!authResult.success) {
+            this.showErrorScreen('Authorization Failed', authResult.message, () => this.normalStartup());
+            return;
+            }
+            
             this.showLoadingMessage('Loading data...');
             // Load data (in parallel for speed)
             await Promise.all([

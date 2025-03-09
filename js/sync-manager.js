@@ -85,26 +85,31 @@ class SyncManager {
     
     // Authorize with Google
     async authorize() {
-        try {
+      try {
         // Check if we have credentials
         const hasCredentials = await this.loadCredentials();
         if (!hasCredentials) {
-            this.isAuthorized = false;
-            throw new Error('Google API credentials not configured. Please add them in Settings.');
+          // Instead of throwing an error, return a specific "missing credentials" status
+          this.isAuthorized = false;
+          return { 
+            success: false, 
+            reason: 'missing_credentials',
+            message: 'Google API credentials not configured.' 
+          };
         }
     
         // Load Google API if not already loaded
         await this.loadGoogleApi();
         
-        // Check if already signed in
+        // Continue with normal authorization...
         if (this.gapi.auth2.getAuthInstance().isSignedIn.get()) {
-            this.isAuthorized = true;
-            console.log('User is already signed in to Google');
-            
-            // Get the spreadsheet ID from storage or create new sheet
-            this.spreadsheetId = await this.storage.get('spreadsheet_id');
-            
-            return true;
+          this.isAuthorized = true;
+          console.log('User is already signed in to Google');
+          
+          // Get the spreadsheet ID from storage or create new sheet
+          this.spreadsheetId = await this.storage.get('spreadsheet_id');
+          
+          return { success: true };
         }
         
         // Try to sign in
@@ -114,12 +119,16 @@ class SyncManager {
         // Check if we have a spreadsheet ID stored
         this.spreadsheetId = await this.storage.get('spreadsheet_id');
         
-        return true;
-        } catch (error) {
+        return { success: true };
+      } catch (error) {
         console.error('Google authorization failed:', error);
         this.isAuthorized = false;
-        throw new Error('Failed to authorize with Google: ' + error.message);
-        }
+        return { 
+          success: false, 
+          reason: 'auth_error',
+          message: 'Failed to authorize with Google: ' + error.message 
+        };
+      }
     }
     
     // Initialize Google Sheets for the app
