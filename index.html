@@ -5,11 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#4a6fa5">
     <title>TaskMaster</title>
-    <link rel="manifest" href="manifest.json">
-    <link rel="stylesheet" href="css/themes.css">
-    <link rel="stylesheet" href="css/animations.css">
-    <link rel="stylesheet" href="css/styles.css">
-    <!-- Favicon will be set dynamically in JavaScript -->
+    <link rel="manifest" href="./manifest.json">
+    <link rel="stylesheet" href="./css/themes.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/styles.css">
     <link id="favicon" rel="icon" href="data:,">
 </head>
 <body>
@@ -20,37 +19,48 @@
         </div>
     </div>
 
-    <!-- Scripts -->
-    <script src="js/graphics.js"></script>
-    <script src="js/sound-effects.js"></script>
-    <script src="js/storage-manager.js"></script>
-    <script src="js/task-manager.js"></script>
-    <script src="js/category-manager.js"></script>
-    <script src="js/sync-manager.js"></script>
-    <script src="js/notification-manager.js"></script>
-    <script src="js/gamification-system.js"></script>
-    <script src="js/task-form.js"></script>
-    <script src="js/ui-manager.js"></script>
-    <script src="js/daily-mission-manager.js"></script>
-    <script src="views/tasks.js"></script>
-    <script src="views/daily.js"></script>
-    <script src="views/progress.js"></script>
-    <script src="views/achievements.js"></script>
-    <script src="views/settings.js"></script>
-    <script src="js/app.js"></script>
+    <!-- Load all dependencies first -->
+    <script src="./js/storage-manager.js"></script>
+    <script src="./js/graphics.js"></script>
+    <script src="./js/sound-effects.js"></script>
+    
+    <!-- Load managers -->
+    <script src="./js/category-manager.js"></script>
+    <script src="./js/task-manager.js"></script>
+    <script src="./js/sync-manager.js"></script>
+    <script src="./js/notification-manager.js"></script>
+    <script src="./js/daily-mission-manager.js"></script>
+    <script src="./js/gamification-system.js"></script>
+    
+    <!-- Load UI components -->
+    <script src="./js/task-form.js"></script>
+    <script src="./js/ui-manager.js"></script>
+    
+    <!-- Load views -->
+    <script src="./views/tasks.js"></script>
+    <script src="./views/daily.js"></script>
+    <script src="./views/progress.js"></script>
+    <script src="./views/achievements.js"></script>
+    <script src="./views/settings.js"></script>
+    
+    <!-- Finally, load the main application -->
+    <script src="./js/app.js"></script>
+    
     <script>
         // Set dynamic favicon
         document.addEventListener('DOMContentLoaded', () => {
             // Create temporary graphics instance to get favicon
-            const tempGraphics = new UIGraphics();
-            const favicon = document.getElementById('favicon');
-            favicon.href = tempGraphics.getFavicon();
+            if (window.UIGraphics) {
+                const tempGraphics = new UIGraphics();
+                const favicon = document.getElementById('favicon');
+                favicon.href = tempGraphics.getFavicon();
+            }
         });
         
         // Register service worker after DOM is loaded
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('/service-worker.js')
+                navigator.serviceWorker.register('./service-worker.js')
                     .then(registration => {
                         console.log('ServiceWorker registered with scope:', registration.scope);
                     })
