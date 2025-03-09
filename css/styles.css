@@ -530,3 +530,382 @@
   color: var(--on-surface);
   opacity: 0.7;
 }
+
+/* Dialog styles */
+.overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.dialog {
+  background-color: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: dialogIn 0.3s ease;
+}
+
+@keyframes dialogIn {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-bottom: 1px solid var(--divider);
+}
+
+.dialog-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.close-button {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 50%;
+}
+
+.close-button:hover {
+  background-color: var(--overlay);
+}
+
+.dialog-content {
+  padding: 1rem;
+  overflow-y: auto;
+}
+
+.dialog-actions {
+  padding: 1rem;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  border-top: 1px solid var(--divider);
+}
+
+/* Form layout helpers */
+.form-row {
+  display: flex;
+  margin: 0 -0.5rem;
+}
+
+.col-6 {
+  width: 50%;
+  padding: 0 0.5rem;
+}
+
+/* Form controls */
+.form-group {
+  margin-bottom: 1rem;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+
+.form-check {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.form-check-input {
+  margin-right: 0.5rem;
+}
+
+.form-check-label {
+  font-weight: normal;
+}
+
+.input-group {
+  display: flex;
+}
+
+.input-group-text {
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--divider);
+  border-left: none;
+  background-color: var(--overlay);
+  border-radius: 0 4px 4px 0;
+}
+
+/* Task details styles */
+.task-details-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.task-details-title {
+  margin: 0;
+  font-size: 1.25rem;
+  flex: 1;
+}
+
+.task-badges {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.task-description {
+  margin-bottom: 1rem;
+  white-space: pre-line;
+}
+
+.detail-section {
+  margin-bottom: 1rem;
+  border-top: 1px solid var(--divider);
+  padding-top: 1rem;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 0.5rem;
+}
+
+.detail-label {
+  font-weight: 500;
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.detail-value {
+  flex: 1;
+}
+
+.progress-bar-large {
+  height: 20px;
+  background-color: var(--divider);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 1rem 0;
+  position: relative;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  background-color: var(--primary);
+  border-radius: 10px;
+}
+
+.progress-bar-large .progress-text {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 500;
+  color: var(--on-primary);
+}
+
+/* Badge styles */
+.badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-align: center;
+}
+
+.priority-badge.priority-1 { background-color: var(--priority-p1); color: white; }
+.priority-badge.priority-2 { background-color: var(--priority-p2); color: white; }
+.priority-badge.priority-3 { background-color: var(--priority-p3); color: white; }
+.priority-badge.priority-4 { background-color: var(--priority-p4); color: white; }
+.priority-badge.priority-5 { background-color: var(--priority-p5); color: white; }
+
+.difficulty-badge.difficulty-1 { background-color: var(--difficulty-d1); color: white; }
+.difficulty-badge.difficulty-2 { background-color: var(--difficulty-d2); color: white; }
+.difficulty-badge.difficulty-3 { background-color: var(--difficulty-d3); color: white; }
+.difficulty-badge.difficulty-4 { background-color: var(--difficulty-d4); color: white; }
+.difficulty-badge.difficulty-5 { background-color: var(--difficulty-d5); color: white; }
+
+/* Button styles */
+.danger-button {
+  background-color: var(--error);
+  color: var(--on-error);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.danger-button:hover {
+  opacity: 0.9;
+}
+
+/* Daily Missions styles */
+.daily-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.streak-badge {
+  background-color: var(--primary);
+  color: var(--on-primary);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.streak-count {
+  font-weight: 700;
+  font-size: 1.1em;
+}
+
+.daily-stats {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.stat-card {
+  background-color: var(--surface);
+  border-radius: 8px;
+  padding: 1rem;
+  flex: 1;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  text-align: center;
+}
+
+.stat-title {
+  font-size: 0.875rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+}
+
+.mission-card {
+  background-color: var(--surface);
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  overflow: hidden;
+  display: flex;
+  position: relative;
+  margin-bottom: 0.75rem;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  cursor: pointer;
+  min-height: 64px;
+}
+
+.mission-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 6px rgba(0,0,0,0.16);
+}
+
+.mission-content {
+  flex: 1;
+  padding: 12px 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  margin-left: 6px; /* Space for priority indicator */
+}
+
+.mission-title {
+  font-weight: 500;
+  font-size: 1rem;
+  margin-bottom: 4px;
+}
+
+.mission-details {
+  font-size: 0.85rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+}
+
+.mission-actions {
+  display: flex;
+  align-items: center;
+  padding-right: 12px;
+}
+
+.mission-complete-btn {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--divider);
+  background-color: var(--surface);
+  color: var(--primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 1rem;
+}
+
+.mission-complete-btn:hover {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.mission-complete-btn.completed {
+  background-color: var(--primary);
+  color: var(--on-primary);
+}
+
+.mission-card.mission-completed {
+  opacity: 0.6;
+}
+
+.mission-card.mission-completed .mission-title {
+  text-decoration: line-through;
+}
+
+.daily-bonus {
+  background-color: var(--surface);
+  border-radius: 8px;
+  padding: 1rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12);
+  margin-top: 1rem;
+}
+
+.daily-bonus h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.daily-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}

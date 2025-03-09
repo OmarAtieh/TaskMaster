@@ -646,6 +646,47 @@ class GamificationSystem {
           return 0;
       }
     }
+    // Award bonus points for achievements, daily missions, etc.
+async awardBonusPoints(points, source, description) {
+    if (!this.userProfile) {
+      await this.loadUserProfile();
+    }
+    
+    if (!points || points <= 0) {
+      return { points: 0, levelUp: false };
+    }
+    
+    // Add to user profile
+    this.userProfile.total_points += points;
+    this.userProfile.total_experience += points;
+    
+    // Track the source of bonus points (optional)
+    if (!this.userProfile.bonus_points_history) {
+      this.userProfile.bonus_points_history = [];
+    }
+    
+    this.userProfile.bonus_points_history.push({
+      date: new Date().toISOString(),
+      points,
+      source,
+      description
+    });
+    
+    // Check for level up
+    const oldLevel = this.userProfile.level;
+    this.userProfile.level = this.calculateLevel(this.userProfile.total_experience);
+    
+    // Save updated profile
+    await this.saveUserProfile();
+    
+    // Return result object
+    return {
+      points,
+      levelUp: this.userProfile.level > oldLevel,
+      newLevel: this.userProfile.level,
+      newTitle: this.getCurrentTitle()
+    };
+  }
   }
   
   // Export the class if in Node.js environment

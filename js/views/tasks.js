@@ -312,19 +312,12 @@ class TasksView {
     }
     
     openTaskDetails(taskId) {
-      console.log('Opening task details for:', taskId);
-      // We'll implement this in a future update
-      alert('Task details view not implemented yet');
-    }
+        this.app.taskForm.showTaskDetails(taskId);
+      }
     
     showAddTaskForm() {
-      // For now, just a simple prompt
-      const taskTitle = prompt('Enter task title:');
-      
-      if (taskTitle) {
-        this.createTask(taskTitle);
+        this.app.taskForm.showAddForm();
       }
-    }
     
     async createTask(title) {
       try {

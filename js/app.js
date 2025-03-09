@@ -54,6 +54,8 @@ class TaskMasterApp {
             this.sync = new SyncManager(this);
             this.notifications = new NotificationManager(this);
             this.gamification = new GamificationSystem(this);
+            this.taskForm = new TaskForm(this);
+            this.dailyMissions = new DailyMissionManager(this);
             
             this.showLoadingMessage('Modules loaded...');
             
