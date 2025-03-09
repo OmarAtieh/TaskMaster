@@ -9,8 +9,8 @@
     <link rel="stylesheet" href="css/themes.css">
     <link rel="stylesheet" href="css/animations.css">
     <link rel="stylesheet" href="css/styles.css">
-    <!-- Prevent favicon errors -->
-    <link rel="icon" href="data:,">
+    <!-- Favicon will be set dynamically in JavaScript -->
+    <link id="favicon" rel="icon" href="data:,">
 </head>
 <body>
     <div id="app">
@@ -21,9 +21,9 @@
     </div>
 
     <!-- Scripts -->
-    <script src="js/storage-manager.js"></script>
     <script src="js/graphics.js"></script>
     <script src="js/sound-effects.js"></script>
+    <script src="js/storage-manager.js"></script>
     <script src="js/task-manager.js"></script>
     <script src="js/category-manager.js"></script>
     <script src="js/sync-manager.js"></script>
@@ -36,6 +36,27 @@
     <script src="views/achievements.js"></script>
     <script src="views/settings.js"></script>
     <script src="js/app.js"></script>
-    <script src="service-worker.js"></script>
+    <script>
+        // Set dynamic favicon
+        document.addEventListener('DOMContentLoaded', () => {
+            // Create temporary graphics instance to get favicon
+            const tempGraphics = new UIGraphics();
+            const favicon = document.getElementById('favicon');
+            favicon.href = tempGraphics.getFavicon();
+        });
+        
+        // Register service worker after DOM is loaded
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/service-worker.js')
+                    .then(registration => {
+                        console.log('ServiceWorker registered with scope:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('ServiceWorker registration failed:', error);
+                    });
+            });
+        }
+    </script>
 </body>
 </html>
