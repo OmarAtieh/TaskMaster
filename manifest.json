@@ -1,0 +1,17 @@
+{
+    "name": "TaskMaster",
+    "short_name": "TaskMaster",
+    "description": "Task management with gamification and Google Sheets sync",
+    "start_url": "/",
+    "display": "standalone",
+    "background_color": "#f5f5f7",
+    "theme_color": "#4a6fa5",
+    "icons": [
+      {
+        "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234a6fa5' rx='128' ry='128'/%3E%3Cpath fill='white' d='M170 220 L342 220 L342 260 L170 260 Z M170 140 L342 140 L342 180 L170 180 Z M170 300 L342 300 L342 340 L170 340 Z'/%3E%3C/svg%3E",
+        "sizes": "512x512",
+        "type": "image/svg+xml",
+        "purpose": "any"
+      }
+    ]
+  }
