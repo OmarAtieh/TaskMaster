@@ -389,6 +389,27 @@ showAuthError(message, retryCallback) {
       }
     });
   }
+  async completeSetup() {
+    try {
+      // Create default categories
+      await this.categories.createDefaultCategories();
+      
+      // Mark app as initialized
+      await this.storage.set('app_initialized', true);
+      
+      // Start app normally
+      await this.normalStartup();
+      
+      // Show PWA installation prompt if appropriate
+      this.checkForPWAInstall();
+      
+      return true;
+    } catch (error) {
+      console.error('Setup completion failed:', error);
+      this.ui.showOnboardingError('Failed to complete setup: ' + error.message);
+      return false;
+    }
+  }
 }
 
 // Register Service Worker for offline functionality

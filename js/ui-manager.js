@@ -18,192 +18,586 @@ class UIManager {
     }
     
     // Show the initial onboarding UI
-    showOnboarding() {
-        const titleThemes = [
-          { id: 'fantasy', name: 'Fantasy Adventure' },
-          { id: 'professional', name: 'Career Growth' },
-          { id: 'academic', name: 'Academic Achievement' },
-          { id: 'athletic', name: 'Athletic Progress' },
-          { id: 'spiritual', name: 'Spiritual Journey' }
-        ];
-        
-        // Replace the loading screen with onboarding UI
-        this.appElement.innerHTML = `
-          <div class="onboarding-container">
-            <div class="onboarding-header">
-              <div class="app-logo">${this.graphics.getAppLogo(80)}</div>
-              <h1>Welcome to TaskMaster</h1>
+    async showOnboarding() {
+      // Show initial onboarding UI with first step only
+      this.appElement.innerHTML = `
+        <div class="onboarding-container">
+          <div class="onboarding-header">
+            <div class="app-logo">${this.graphics.getAppLogo(80)}</div>
+            <h1>Welcome to TaskMaster</h1>
+          </div>
+          
+          <div class="onboarding-content">
+            <div class="step-indicator">
+              <div class="step active">1</div>
+              <div class="step-line"></div>
+              <div class="step">2</div>
+              <div class="step-line"></div>
+              <div class="step">3</div>
+              <div class="step-line"></div>
+              <div class="step">4</div>
             </div>
             
-            <div class="onboarding-steps">
-              <div class="step active" id="step-1">
-                <h2>Let's personalize your experience</h2>
-                <p>Choose how TaskMaster should motivate you:</p>
-                
-                <div class="form-group">
-                  <label for="title-theme">Achievement Style:</label>
-                  <select id="title-theme" class="form-control">
-                    ${titleThemes.map(theme => 
-                      `<option value="${theme.id}">${theme.name}</option>`
-                    ).join('')}
-                  </select>
-                  <p class="help-text">This determines how your progress titles will be themed</p>
-                </div>
-                
-                <div class="form-group">
-                  <label for="theme-preference">Theme:</label>
-                  <select id="theme-preference" class="form-control">
-                    <option value="auto">Auto (Follow System)</option>
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                  </select>
-                </div>
-                
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" id="enable-notifications" checked>
-                    Enable notifications for task reminders
-                  </label>
-                </div>
-                
-                <div class="form-group">
-                  <label>
-                    <input type="checkbox" id="enable-sounds" checked>
-                    Enable sound effects
-                  </label>
-                </div>
-                
-                <button id="next-button" class="primary-button">Continue</button>
-              </div>
-              
-              <div class="step" id="step-2">
-                <h2>Set up Google API</h2>
-                <p>TaskMaster uses Google Sheets to securely store and sync your tasks across devices.</p>
-                <p>You'll need to provide your own Google API credentials:</p>
-                
-                <div class="form-group">
-                  <label for="google-client-id">Client ID:</label>
-                  <input type="text" id="google-client-id" class="form-control" placeholder="Your Google OAuth 2.0 Client ID">
-                </div>
-                
-                <div class="form-group">
-                  <label for="google-api-key">API Key:</label>
-                  <input type="text" id="google-api-key" class="form-control" placeholder="Your Google API Key">
-                </div>
-                
-                <div class="help-text">
-                  <strong>How to get credentials:</strong>
-                  <ol>
-                    <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
-                    <li>Create a project</li>
-                    <li>Enable Google Sheets API and Google Drive API</li>
-                    <li>Create OAuth 2.0 credentials and an API Key</li>
-                    <li>Add your domain to authorized JavaScript origins</li>
-                  </ol>
-                </div>
-                
-                <button id="prev-button-2" class="secondary-button">Back</button>
-                <button id="next-button-2" class="primary-button">Continue</button>
-              </div>
-              
-              <div class="step" id="step-3">
-                <h2>Connect to Google</h2>
-                <p>Now let's connect to your Google account to set up the spreadsheet.</p>
-                <p>Your data remains private in your own Google account.</p>
-                
-                <button id="google-auth-button" class="primary-button">
-                  Connect with Google
-                </button>
-                
-                <p class="help-text">We only request access to a single spreadsheet created specifically for TaskMaster.</p>
-                
-                <button id="prev-button-3" class="secondary-button">Back</button>
-              </div>
-              
-              <div class="step" id="step-4">
-                <h2>You're all set!</h2>
-                <p>TaskMaster is ready to help you be more productive.</p>
-                <p>We've set up some default categories to get you started:</p>
-                
-                <ul class="category-list">
-                  <li>Work</li>
-                  <li>Personal</li>
-                  <li>Health</li>
-                  <li>Education</li>
-                  <li>Finance</li>
-                  <li>Spiritual</li>
-                  <li>Mental Wellbeing</li>
-                </ul>
-                
-                <button id="finish-setup-button" class="primary-button">Get Started</button>
-              </div>
+            <div id="onboarding-step-content">
+              <!-- Step content will be loaded here -->
             </div>
           </div>
-        `;
+        </div>
+      `;
+      
+      // Start the sequential onboarding process
+      await this.startOnboardingSequence();
+    }
+    
+    // New method to handle the sequential onboarding process
+    async startOnboardingSequence() {
+      try {
+        // Step 1: Personalization preferences
+        await this.showOnboardingStep1();
         
-        // Add event listeners
+        // Step 2: Check and collect API credentials
+        const hasCredentials = await this.checkAndCollectCredentials();
+        if (!hasCredentials) return; // Process paused for user input
+        
+        // Step 3: Authenticate with Google
+        const isAuthenticated = await this.checkAndPerformAuthentication();
+        if (!isAuthenticated) return; // Process paused for user action
+        
+        // Step 4: Initialize Google Sheets
+        const sheetInitialized = await this.checkAndInitializeSheets();
+        if (!sheetInitialized) return; // Process paused for user action
+        
+        // Final step: Setup complete
+        await this.showOnboardingComplete();
+        
+        // Complete the onboarding process
+        await this.app.completeSetup();
+      } catch (error) {
+        console.error('Onboarding sequence error:', error);
+        this.showOnboardingError(error.message);
+      }
+    }
+    
+    // Step 1: Collect personalization preferences
+    async showOnboardingStep1() {
+      const titleThemes = [
+        { id: 'fantasy', name: 'Fantasy Adventure' },
+        { id: 'professional', name: 'Career Growth' },
+        { id: 'academic', name: 'Academic Achievement' },
+        { id: 'athletic', name: 'Athletic Progress' },
+        { id: 'spiritual', name: 'Spiritual Journey' }
+      ];
+      
+      const stepContent = document.getElementById('onboarding-step-content');
+      stepContent.innerHTML = `
+        <div class="onboarding-step">
+          <h2>Let's personalize your experience</h2>
+          <p>Choose how TaskMaster should motivate you:</p>
+          
+          <div class="form-group">
+            <label for="title-theme">Achievement Style:</label>
+            <select id="title-theme" class="form-control">
+              ${titleThemes.map(theme => 
+                `<option value="${theme.id}">${theme.name}</option>`
+              ).join('')}
+            </select>
+            <p class="help-text">This determines how your progress titles will be themed</p>
+          </div>
+          
+          <div class="form-group">
+            <label for="theme-preference">Theme:</label>
+            <select id="theme-preference" class="form-control">
+              <option value="auto">Auto (Follow System)</option>
+              <option value="light">Light</option>
+              <option value="dark">Dark</option>
+            </select>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="enable-notifications" checked>
+              Enable notifications for task reminders
+            </label>
+          </div>
+          
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="enable-sounds" checked>
+              Enable sound effects
+            </label>
+          </div>
+          
+          <div class="onboarding-actions">
+            <button id="next-button" class="primary-button">Continue</button>
+          </div>
+        </div>
+      `;
+      
+      // Update the step indicators
+      this.updateStepIndicators(1);
+      
+      // Return a promise that resolves when the user clicks Continue
+      return new Promise(resolve => {
         document.getElementById('next-button').addEventListener('click', () => {
           this.saveInitialPreferences();
-          this.showOnboardingStep(2);
-        });
-        
-        document.getElementById('prev-button-2').addEventListener('click', () => {
-          this.showOnboardingStep(1);
-        });
-        
-        document.getElementById('next-button-2').addEventListener('click', async () => {
-          const clientId = document.getElementById('google-client-id').value.trim();
-          const apiKey = document.getElementById('google-api-key').value.trim();
-          
-          if (!clientId || !apiKey) {
-            alert('Please enter both Google API credentials to continue.');
-            return;
-          }
-          
-          try {
-            // Save credentials
-            await this.app.storage.set('google_client_id', clientId);
-            await this.app.storage.set('google_api_key', apiKey);
-            
-            // Update sync manager
-            this.app.sync.CLIENT_ID = clientId;
-            this.app.sync.API_KEY = apiKey;
-            
-            this.showOnboardingStep(3);
-          } catch (error) {
-            console.error('Error saving credentials:', error);
-            alert('Error saving credentials: ' + error.message);
-          }
-        });
-        
-        document.getElementById('prev-button-3').addEventListener('click', () => {
-          this.showOnboardingStep(2);
-        });
-        
-        document.getElementById('google-auth-button').addEventListener('click', async () => {
-          try {
-            await this.app.sync.authorize();
-            this.showOnboardingStep(4);
-          } catch (error) {
-            console.error('Google authorization failed:', error);
-            alert('Google authorization failed: ' + error.message);
-          }
-        });
-        
-        document.getElementById('finish-setup-button').addEventListener('click', async () => {
-          try {
-            await this.completeSetup();
-          } catch (error) {
-            console.error('Setup completion failed:', error);
-            alert('Setup failed: ' + error.message);
-          }
+          resolve(true);
         });
         
         // Apply theme preference immediately if changed
         document.getElementById('theme-preference').addEventListener('change', (e) => {
           this.app.applyTheme(e.target.value);
         });
+      });
+    }
+    
+    // Step 2: Check for API credentials and collect if needed
+    async checkAndCollectCredentials() {
+      // Check if credentials exist
+      const clientId = await this.app.storage.get('google_client_id');
+      const apiKey = await this.app.storage.get('google_api_key');
+      
+      if (clientId && apiKey) {
+        // Credentials exist, update the sync manager
+        this.app.sync.CLIENT_ID = clientId;
+        this.app.sync.API_KEY = apiKey;
+        
+        // Update step indicators and move to next step
+        this.updateStepIndicators(2, true); // Mark as completed
+        return true;
       }
+      
+      // No credentials, show form to collect them
+      const stepContent = document.getElementById('onboarding-step-content');
+      stepContent.innerHTML = `
+        <div class="onboarding-step">
+          <h2>Set up Google API</h2>
+          <p>TaskMaster uses Google Sheets to securely store and sync your tasks across devices.</p>
+          <p>You'll need to provide your own Google API credentials:</p>
+          
+          <div class="form-group">
+            <label for="google-client-id">Client ID:</label>
+            <input type="text" id="google-client-id" class="form-control" placeholder="Your Google OAuth 2.0 Client ID">
+          </div>
+          
+          <div class="form-group">
+            <label for="google-api-key">API Key:</label>
+            <input type="text" id="google-api-key" class="form-control" placeholder="Your Google API Key">
+          </div>
+          
+          <div class="help-text">
+            <strong>How to get credentials:</strong>
+            <ol>
+              <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+              <li>Create a project</li>
+              <li>Enable Google Sheets API and Google Drive API</li>
+              <li>Create OAuth 2.0 credentials and an API Key</li>
+              <li>Add your domain to authorized JavaScript origins</li>
+            </ol>
+          </div>
+          
+          <div class="onboarding-actions">
+            <button id="prev-button" class="secondary-button">Back</button>
+            <button id="save-credentials-button" class="primary-button">Continue</button>
+          </div>
+        </div>
+      `;
+      
+      // Update the step indicators
+      this.updateStepIndicators(2);
+      
+      // Return a promise that resolves when the user provides credentials
+      return new Promise(resolve => {
+        document.getElementById('prev-button').addEventListener('click', () => {
+          this.showOnboardingStep1().then(() => resolve(false));
+        });
+        
+        document.getElementById('save-credentials-button').addEventListener('click', async () => {
+          const newClientId = document.getElementById('google-client-id').value.trim();
+          const newApiKey = document.getElementById('google-api-key').value.trim();
+          
+          if (!newClientId || !newApiKey) {
+            alert('Please enter both Google API credentials to continue.');
+            return;
+          }
+          
+          try {
+            // Save credentials
+            await this.app.storage.set('google_client_id', newClientId);
+            await this.app.storage.set('google_api_key', newApiKey);
+            
+            // Update sync manager
+            this.app.sync.CLIENT_ID = newClientId;
+            this.app.sync.API_KEY = newApiKey;
+            
+            // Move to next step
+            resolve(true);
+          } catch (error) {
+            console.error('Error saving credentials:', error);
+            alert('Error saving credentials: ' + error.message);
+          }
+        });
+      });
+    }
+    
+    // Step 3: Check and perform Google authentication
+    async checkAndPerformAuthentication() {
+      // Show authentication step
+      const stepContent = document.getElementById('onboarding-step-content');
+      stepContent.innerHTML = `
+        <div class="onboarding-step">
+          <h2>Connect to Google</h2>
+          <p>Now let's connect to your Google account to set up the spreadsheet.</p>
+          <p>Your data remains private in your own Google account.</p>
+          
+          <div class="loading-status" id="auth-status">
+            <div class="spinner"></div>
+            <p>Checking authentication status...</p>
+          </div>
+          
+          <div class="onboarding-actions" id="auth-actions" style="display: none;">
+            <button id="prev-button" class="secondary-button">Back</button>
+            <button id="auth-button" class="primary-button">Connect with Google</button>
+          </div>
+        </div>
+      `;
+      
+      // Update the step indicators
+      this.updateStepIndicators(3);
+      
+      // Check current authentication status
+      try {
+        const authResult = await this.app.sync.authorize();
+        
+        const statusDiv = document.getElementById('auth-status');
+        const actionsDiv = document.getElementById('auth-actions');
+        
+        if (authResult.success) {
+          // Already authenticated
+          statusDiv.innerHTML = `
+            <div class="success-icon">✓</div>
+            <p>Successfully connected to Google!</p>
+          `;
+          
+          // Short delay then move to next step
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return true;
+        } else {
+          // Not authenticated, show button
+          statusDiv.innerHTML = `
+            <div class="info-icon">ℹ️</div>
+            <p>Google authentication required.</p>
+          `;
+          actionsDiv.style.display = 'flex';
+          
+          // Return a promise that resolves when authenticated
+          return new Promise(resolve => {
+            document.getElementById('prev-button').addEventListener('click', () => {
+              this.checkAndCollectCredentials().then(() => resolve(false));
+            });
+            
+            document.getElementById('auth-button').addEventListener('click', async () => {
+              try {
+                statusDiv.innerHTML = `
+                  <div class="spinner"></div>
+                  <p>Connecting to Google...</p>
+                `;
+                actionsDiv.style.display = 'none';
+                
+                const newAuthResult = await this.app.sync.authorize();
+                
+                if (newAuthResult.success) {
+                  statusDiv.innerHTML = `
+                    <div class="success-icon">✓</div>
+                    <p>Successfully connected to Google!</p>
+                  `;
+                  
+                  // Short delay then move to next step
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  resolve(true);
+                } else {
+                  throw new Error(newAuthResult.message);
+                }
+              } catch (error) {
+                console.error('Authentication failed:', error);
+                statusDiv.innerHTML = `
+                  <div class="error-icon">❌</div>
+                  <p>Authentication failed: ${error.message}</p>
+                `;
+                actionsDiv.style.display = 'flex';
+              }
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error checking auth status:', error);
+        
+        const statusDiv = document.getElementById('auth-status');
+        statusDiv.innerHTML = `
+          <div class="error-icon">❌</div>
+          <p>Error checking authentication: ${error.message}</p>
+        `;
+        
+        document.getElementById('auth-actions').style.display = 'flex';
+        
+        // Return a promise that resolves when authenticated
+        return new Promise(resolve => {
+          document.getElementById('prev-button').addEventListener('click', () => {
+            this.checkAndCollectCredentials().then(() => resolve(false));
+          });
+          
+          document.getElementById('auth-button').addEventListener('click', async () => {
+            try {
+              const authResult = await this.app.sync.authorize();
+              if (authResult.success) {
+                resolve(true);
+              } else {
+                throw new Error(authResult.message);
+              }
+            } catch (error) {
+              console.error('Authentication failed:', error);
+              alert('Authentication failed: ' + error.message);
+            }
+          });
+        });
+      }
+    }
+    
+    // Step 4: Check and initialize Google Sheets
+    async checkAndInitializeSheets() {
+      // Show initialization step
+      const stepContent = document.getElementById('onboarding-step-content');
+      stepContent.innerHTML = `
+        <div class="onboarding-step">
+          <h2>Setting up Google Sheets</h2>
+          <p>We're creating a spreadsheet to store your tasks and progress.</p>
+          
+          <div class="loading-status" id="sheets-status">
+            <div class="spinner"></div>
+            <p>Setting up Google Sheets...</p>
+          </div>
+          
+          <div class="onboarding-actions" id="sheets-actions" style="display: none;">
+            <button id="prev-button" class="secondary-button">Back</button>
+            <button id="retry-button" class="primary-button">Retry</button>
+          </div>
+        </div>
+      `;
+      
+      // Update the step indicators
+      this.updateStepIndicators(4);
+      
+      // Try to initialize sheets
+      try {
+        const result = await this.app.sync.initializeSheets();
+        
+        const statusDiv = document.getElementById('sheets-status');
+        
+        if (result.success) {
+          // Successful initialization
+          statusDiv.innerHTML = `
+            <div class="success-icon">✓</div>
+            <p>Google Sheets setup complete!</p>
+          `;
+          
+          // Short delay then move to next step
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          return true;
+        } else {
+          // Initialization failed
+          statusDiv.innerHTML = `
+            <div class="error-icon">❌</div>
+            <p>Google Sheets setup failed: ${result.message}</p>
+          `;
+          
+          document.getElementById('sheets-actions').style.display = 'flex';
+          
+          // Return a promise that resolves when sheets are initialized
+          return new Promise(resolve => {
+            document.getElementById('prev-button').addEventListener('click', () => {
+              this.checkAndPerformAuthentication().then(() => resolve(false));
+            });
+            
+            document.getElementById('retry-button').addEventListener('click', async () => {
+              try {
+                statusDiv.innerHTML = `
+                  <div class="spinner"></div>
+                  <p>Retrying Google Sheets setup...</p>
+                `;
+                document.getElementById('sheets-actions').style.display = 'none';
+                
+                const newResult = await this.app.sync.initializeSheets();
+                
+                if (newResult.success) {
+                  statusDiv.innerHTML = `
+                    <div class="success-icon">✓</div>
+                    <p>Google Sheets setup complete!</p>
+                  `;
+                  
+                  // Short delay then move to next step
+                  await new Promise(resolve => setTimeout(resolve, 1500));
+                  resolve(true);
+                } else {
+                  throw new Error(newResult.message);
+                }
+              } catch (error) {
+                console.error('Sheets initialization failed:', error);
+                statusDiv.innerHTML = `
+                  <div class="error-icon">❌</div>
+                  <p>Google Sheets setup failed: ${error.message}</p>
+                `;
+                document.getElementById('sheets-actions').style.display = 'flex';
+              }
+            });
+          });
+        }
+      } catch (error) {
+        console.error('Error initializing sheets:', error);
+        
+        const statusDiv = document.getElementById('sheets-status');
+        statusDiv.innerHTML = `
+          <div class="error-icon">❌</div>
+          <p>Error initializing Google Sheets: ${error.message}</p>
+        `;
+        
+        document.getElementById('sheets-actions').style.display = 'flex';
+        
+        // Return a promise that resolves when sheets are initialized
+        return new Promise(resolve => {
+          document.getElementById('prev-button').addEventListener('click', () => {
+            this.checkAndPerformAuthentication().then(() => resolve(false));
+          });
+          
+          document.getElementById('retry-button').addEventListener('click', async () => {
+            try {
+              statusDiv.innerHTML = `
+                <div class="spinner"></div>
+                <p>Retrying Google Sheets setup...</p>
+              `;
+              document.getElementById('sheets-actions').style.display = 'none';
+              
+              const result = await this.app.sync.initializeSheets();
+              
+              if (result.success) {
+                resolve(true);
+              } else {
+                throw new Error(result.message);
+              }
+            } catch (error) {
+              console.error('Sheets initialization failed:', error);
+              alert('Sheets initialization failed: ' + error.message);
+            }
+          });
+        });
+      }
+    }
+    
+    // Show the completion step
+    async showOnboardingComplete() {
+      const stepContent = document.getElementById('onboarding-step-content');
+      stepContent.innerHTML = `
+        <div class="onboarding-step">
+          <h2>You're all set!</h2>
+          <p>TaskMaster is ready to help you be more productive.</p>
+          <p>We've set up some default categories to get you started:</p>
+          
+          <ul class="category-list">
+            <li>Work</li>
+            <li>Personal</li>
+            <li>Health</li>
+            <li>Education</li>
+            <li>Finance</li>
+            <li>Spiritual</li>
+            <li>Mental Wellbeing</li>
+          </ul>
+          
+          <div class="onboarding-actions">
+            <button id="finish-button" class="primary-button">Get Started</button>
+          </div>
+        </div>
+      `;
+      
+      // Complete all step indicators
+      this.updateAllStepIndicators();
+      
+      // Return a promise that resolves when user clicks Get Started
+      return new Promise(resolve => {
+        document.getElementById('finish-button').addEventListener('click', () => {
+          resolve(true);
+        });
+      });
+    }
+    
+    // Show an error during onboarding
+    showOnboardingError(message) {
+      const stepContent = document.getElementById('onboarding-step-content');
+      stepContent.innerHTML = `
+        <div class="onboarding-step">
+          <h2>Oops! Something went wrong</h2>
+          <p>${message}</p>
+          
+          <div class="onboarding-actions">
+            <button id="restart-button" class="primary-button">Restart Setup</button>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('restart-button').addEventListener('click', () => {
+        window.location.reload();
+      });
+    }
+    
+    // Update step indicators to show current step
+    updateStepIndicators(currentStep) {
+      const stepIndicators = document.querySelectorAll('.step-indicator .step');
+      
+      stepIndicators.forEach((indicator, index) => {
+        // Step number is index + 1
+        const stepNumber = index + 1;
+        
+        if (stepNumber < currentStep) {
+          // Previous steps are completed
+          indicator.classList.remove('active');
+          indicator.classList.add('completed');
+        } else if (stepNumber === currentStep) {
+          // Current step is active
+          indicator.classList.add('active');
+          indicator.classList.remove('completed');
+        } else {
+          // Future steps are neither active nor completed
+          indicator.classList.remove('active');
+          indicator.classList.remove('completed');
+        }
+      });
+    }
+    
+    // Mark a specific step as completed
+    updateStepIndicators(stepNumber, completed = false) {
+      const stepIndicators = document.querySelectorAll('.step-indicator .step');
+      
+      stepIndicators.forEach((indicator, index) => {
+        const thisStepNumber = index + 1;
+        
+        if (thisStepNumber === stepNumber) {
+          if (completed) {
+            indicator.classList.remove('active');
+            indicator.classList.add('completed');
+          } else {
+            indicator.classList.add('active');
+            indicator.classList.remove('completed');
+          }
+        }
+      });
+    }
+    
+    // Mark all steps as completed
+    updateAllStepIndicators() {
+      const stepIndicators = document.querySelectorAll('.step-indicator .step');
+      
+      stepIndicators.forEach(indicator => {
+        indicator.classList.remove('active');
+        indicator.classList.add('completed');
+      });
+    }
     
     // Show specific onboarding step
     showOnboardingStep(stepNumber) {
