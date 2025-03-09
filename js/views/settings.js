@@ -217,6 +217,28 @@ class SettingsView {
             </div>
           </div>
         </div>
+        <div class="danger-zone">
+            <h4>Danger Zone</h4>
+            <p class="danger-text">The following actions are destructive and cannot be undone.</p>
+            
+            <div class="danger-actions">
+                <div class="danger-action">
+                <div>
+                    <h5>Reset Application</h5>
+                    <p>This will reset the app settings and clear local data, but preserves your Google Sheet.</p>
+                </div>
+                <button id="reset-app" class="danger-button">Reset App</button>
+                </div>
+                
+                <div class="danger-action">
+                <div>
+                    <h5>Clear All Data</h5>
+                    <p>This will permanently delete all tasks, categories, and progress. Your Google Sheet will also be cleared.</p>
+                </div>
+                <button id="clear-all-data" class="danger-button">Clear All Data</button>
+                </div>
+            </div>
+        </div>
       `;
     }
     
@@ -294,16 +316,20 @@ class SettingsView {
           this.resetApplication();
         }
       });
+      // Clear all data button
+    document.getElementById('clear-all-data')?.addEventListener('click', () => {
+            this.showClearDataConfirmation();
+        });
     
     // Show/hide credentials
     document.getElementById('show-client-id')?.addEventListener('click', () => {
-    const input = document.getElementById('google-client-id');
-    if (input.type === 'password') {
-        input.type = 'text';
-    } else {
-        input.type = 'password';
-    }
-    });
+        const input = document.getElementById('google-client-id');
+        if (input.type === 'password') {
+            input.type = 'text';
+        } else {
+            input.type = 'password';
+        }
+        });
 
     document.getElementById('show-api-key')?.addEventListener('click', () => {
     const input = document.getElementById('google-api-key');
@@ -381,6 +407,224 @@ class SettingsView {
         console.error('Error calculating storage usage:', error);
         usageElement.textContent = 'Unable to calculate';
       }
+    }
+
+    // Show multi-step confirmation dialog for clearing all data
+    showClearDataConfirmation() {
+        // Create dialog overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        
+        // Create confirmation dialog
+        overlay.innerHTML = `
+        <div class="dialog clear-data-dialog">
+            <div class="dialog-header">
+            <h2>Clear All Data</h2>
+            <button type="button" class="close-button" id="cancel-clear-data">×</button>
+            </div>
+            
+            <div class="dialog-content">
+            <div class="warning-icon">⚠️</div>
+            <h3>Warning: Destructive Action</h3>
+            <p>You are about to permanently delete <strong>all</strong> of your TaskMaster data, including:</p>
+            <ul>
+                <li>All tasks (completed and pending)</li>
+                <li>All categories and subcategories</li>
+                <li>Your progress, level, and achievements</li>
+                <li>All data in your Google Sheet</li>
+            </ul>
+            
+            <p class="warning-text">This action <strong>cannot be undone</strong>. Deleted data cannot be recovered.</p>
+            
+            <div class="confirmation-input">
+                <label for="confirmation-text">Type "DELETE ALL MY DATA" to confirm:</label>
+                <input type="text" id="confirmation-text" class="form-control" placeholder="Type confirmation phrase here">
+            </div>
+            </div>
+            
+            <div class="dialog-actions">
+            <button type="button" id="cancel-clear-data-btn" class="secondary-button">Cancel</button>
+            <button type="button" id="confirm-clear-data" class="danger-button" disabled>Clear All Data</button>
+            </div>
+        </div>
+        `;
+        
+        // Add to document
+        document.body.appendChild(overlay);
+        
+        // Add event listeners
+        document.getElementById('cancel-clear-data')?.addEventListener('click', () => {
+        overlay.remove();
+        });
+        
+        document.getElementById('cancel-clear-data-btn')?.addEventListener('click', () => {
+        overlay.remove();
+        });
+        
+        // Enable/disable confirm button based on correct confirmation text
+        const confirmInput = document.getElementById('confirmation-text');
+        const confirmButton = document.getElementById('confirm-clear-data');
+        
+        confirmInput?.addEventListener('input', (e) => {
+        if (confirmButton) {
+            confirmButton.disabled = e.target.value !== 'DELETE ALL MY DATA';
+        }
+        });
+        
+        // Handle final confirmation
+        confirmButton?.addEventListener('click', async () => {
+        if (confirmInput?.value === 'DELETE ALL MY DATA') {
+            overlay.remove();
+            this.showFinalConfirmation();
+        }
+        });
+    }
+    
+    // Show final confirmation with countdown
+    showFinalConfirmation() {
+        // Create dialog overlay
+        const overlay = document.createElement('div');
+        overlay.className = 'overlay';
+        
+        // Create confirmation dialog
+        overlay.innerHTML = `
+        <div class="dialog clear-data-dialog">
+            <div class="dialog-header">
+            <h2>Final Confirmation</h2>
+            <button type="button" class="close-button" id="cancel-final-clear">×</button>
+            </div>
+            
+            <div class="dialog-content">
+            <div class="warning-icon">🛑</div>
+            <h3>Point of No Return</h3>
+            <p>Are you absolutely certain you want to delete all your data?</p>
+            <p>Once you click "Confirm", the process will begin and cannot be stopped.</p>
+            
+            <div class="countdown-timer">
+                <p>Proceeding in <span id="countdown">5</span> seconds...</p>
+                <div class="progress-bar-large">
+                <div class="progress-bar-fill" id="countdown-bar" style="width: 100%"></div>
+                </div>
+            </div>
+            </div>
+            
+            <div class="dialog-actions">
+            <button type="button" id="cancel-final-clear-btn" class="secondary-button">Cancel</button>
+            <button type="button" id="confirm-final-clear" class="danger-button">Confirm</button>
+            </div>
+        </div>
+        `;
+        
+        // Add to document
+        document.body.appendChild(overlay);
+        
+        // Add event listeners for cancel buttons
+        document.getElementById('cancel-final-clear')?.addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        overlay.remove();
+        });
+        
+        document.getElementById('cancel-final-clear-btn')?.addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        overlay.remove();
+        });
+        
+        // Final confirmation button
+        document.getElementById('confirm-final-clear')?.addEventListener('click', () => {
+        clearInterval(countdownInterval);
+        overlay.remove();
+        this.executeDataClear();
+        });
+        
+        // Countdown timer
+        let seconds = 5;
+        const countdownElement = document.getElementById('countdown');
+        const countdownBar = document.getElementById('countdown-bar');
+        
+        const countdownInterval = setInterval(() => {
+        seconds--;
+        
+        if (countdownElement) {
+            countdownElement.textContent = seconds;
+        }
+        
+        if (countdownBar) {
+            countdownBar.style.width = `${(seconds / 5) * 100}%`;
+        }
+        
+        if (seconds <= 0) {
+            clearInterval(countdownInterval);
+            overlay.remove();
+            this.executeDataClear();
+        }
+        }, 1000);
+    }
+    
+    // Actually perform the data clearing
+    async executeDataClear() {
+        try {
+        // Show loading overlay
+        this.app.ui.showLoadingMessage('Clearing all data...');
+        
+        // 1. Clear Google Sheet
+        if (this.app.sync.isAuthorized && this.app.sync.spreadsheetId) {
+            await this.clearGoogleSheet();
+        }
+        
+        // 2. Clear all local storage
+        await this.app.storage.clear('tasks');
+        await this.app.storage.clear('categories');
+        await this.app.storage.clear('user_data');
+        await this.app.storage.clear('sync_queue');
+        
+        // 3. Reset gamification system
+        if (this.app.gamification) {
+            await this.app.gamification.initializeUserProfile();
+        }
+        
+        // 4. Reset daily missions
+        if (this.app.dailyMissions) {
+            await this.app.storage.delete('daily_missions', 'user_data');
+        }
+        
+        // 5. Keep API credentials to avoid re-setup
+        // (We don't clear google_client_id and google_api_key)
+        
+        // 6. Show success message
+        alert('All data has been successfully cleared.');
+        
+        // 7. Reload the application (like a fresh start)
+        window.location.reload();
+        } catch (error) {
+        console.error('Error clearing data:', error);
+        alert('An error occurred while clearing data: ' + error.message);
+        }
+    }
+    
+    // Clear Google Sheet data
+    async clearGoogleSheet() {
+        try {
+        // First, ensure we're authorized
+        if (!this.app.sync.isAuthorized) {
+            await this.app.sync.authorize();
+        }
+        
+        // For each sheet, clear all data except headers
+        const sheets = ['Tasks', 'Categories', 'UserProfile', 'Settings'];
+        
+        for (const sheetName of sheets) {
+            // Clear all data except headers (row 1)
+            await this.app.sync.gapi.client.sheets.spreadsheets.values.clear({
+            spreadsheetId: this.app.sync.spreadsheetId,
+            range: `${sheetName}!A2:Z`
+            });
+        }
+        
+        return true;
+        } catch (error) {
+        console.error('Error clearing Google Sheet:', error);
+        throw new Error('Failed to clear Google Sheet: ' + error.message);
+        }
     }
     
     async resetApplication() {

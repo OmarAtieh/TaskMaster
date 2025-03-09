@@ -1653,3 +1653,133 @@ input:checked + .slider:before {
 .status-text.error {
   color: var(--error);
 }
+/* Add to styles.css */
+
+.danger-zone {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--divider);
+}
+
+.danger-zone h4 {
+  color: var(--error);
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.danger-text {
+  color: var(--error);
+  opacity: 0.8;
+  font-size: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.danger-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.danger-action {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background-color: rgba(var(--error-rgb), 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(var(--error-rgb), 0.2);
+}
+
+.danger-action h5 {
+  margin: 0 0 0.5rem 0;
+  color: var(--error);
+}
+
+.danger-action p {
+  margin: 0;
+  font-size: 0.9rem;
+  max-width: 70%;
+}
+
+.danger-button {
+  background-color: var(--error);
+  color: var(--on-error);
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.danger-button:hover {
+  opacity: 0.9;
+}
+
+/* Add this CSS variable to both light and dark themes */
+:root {
+  --error-rgb: 176, 0, 32;
+}
+
+[data-theme="dark"] {
+  --error-rgb: 207, 102, 121;
+}
+
+@media (max-width: 768px) {
+  .danger-action {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .danger-action p {
+    max-width: 100%;
+    margin-bottom: 1rem;
+  }
+}
+/* Add to styles.css */
+
+.clear-data-dialog {
+  max-width: 550px;
+}
+
+.warning-icon {
+  font-size: 3rem;
+  text-align: center;
+  margin-bottom: 1rem;
+}
+
+.warning-text {
+  color: var(--error);
+  font-weight: 500;
+  margin: 1rem 0;
+  padding: 0.5rem;
+  border: 1px solid var(--error);
+  border-radius: 4px;
+  background-color: rgba(var(--error-rgb), 0.05);
+  text-align: center;
+}
+
+.confirmation-input {
+  margin: 1.5rem 0;
+}
+
+.countdown-timer {
+  margin: 1.5rem 0;
+  text-align: center;
+}
+
+.countdown-timer p {
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.countdown-timer #countdown {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--error);
+}
+
+#countdown-bar {
+  background-color: var(--error);
+  transition: width 1s linear;
+}
