@@ -916,7 +916,7 @@ class UIManager {
       });
     }
     showCredentialsForm() {
-      // Replace the loading screen with credentials form
+      // Replace the current content with credentials form
       this.appElement.innerHTML = `
         <div class="credentials-container">
           <div class="credentials-header">
@@ -998,6 +998,25 @@ class UIManager {
       });
     }
     
+    // Helper method to show loading overlay
+    showLoadingOverlay(message) {
+      // Create or update loading overlay
+      let overlay = document.querySelector('.loading-overlay');
+      
+      if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.className = 'loading-overlay';
+        document.body.appendChild(overlay);
+      }
+      
+      overlay.innerHTML = `
+        <div class="loading-content">
+          <div class="spinner"></div>
+          <p>${message}</p>
+        </div>
+      `;
+    }
+    
     // Add a helper method to show loading overlay
     showLoadingOverlay(message) {
       // Create or update loading overlay
@@ -1038,6 +1057,102 @@ class UIManager {
       if (retryCallback) {
         document.getElementById('retry-button').addEventListener('click', retryCallback);
       }
+    }
+    // Show a more user-friendly setup error with options
+    showSetupOptionsError(error, retryCallback) {
+      this.appElement.innerHTML = `
+        <div class="error-container">
+          <div class="error-header">
+            <div class="app-logo">${this.graphics.getAppLogo(64)}</div>
+            <h1>Setup Encountered an Issue</h1>
+          </div>
+          
+          <div class="error-content">
+            <p>${error.message || 'An error occurred during setup.'}</p>
+            
+            <div class="error-options">
+              <div class="error-option">
+                <h3>Try Again</h3>
+                <p>Retry the setup process from the beginning.</p>
+                <button id="retry-setup" class="primary-button">Retry Setup</button>
+              </div>
+              
+              <div class="error-option">
+                <h3>Update Google API Credentials</h3>
+                <p>Enter new Google API credentials.</p>
+                <button id="update-api-credentials" class="secondary-button">Update Credentials</button>
+              </div>
+              
+              <div class="error-option">
+                <h3>Start Fresh</h3>
+                <p>Reset the application and start from scratch.</p>
+                <button id="reset-app" class="tertiary-button">Reset Application</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('retry-setup').addEventListener('click', retryCallback);
+      document.getElementById('update-api-credentials').addEventListener('click', () => {
+        this.showCredentialsForm();
+      });
+      document.getElementById('reset-app').addEventListener('click', async () => {
+        if (confirm('This will reset the application completely. Continue?')) {
+          await this.app.storage.clear('user_data');
+          window.location.reload();
+        }
+      });
+    }
+
+    showStartError(error) {
+      this.appElement.innerHTML = `
+        <div class="error-container">
+          <div class="error-header">
+            <div class="app-logo">${this.graphics.getAppLogo(64)}</div>
+            <h1>Startup Error</h1>
+          </div>
+          
+          <div class="error-content">
+            <p>${error.message || 'An error occurred during startup.'}</p>
+            
+            <div class="error-options">
+              <div class="error-option">
+                <h3>Try Again</h3>
+                <p>Retry loading the application.</p>
+                <button id="retry-startup" class="primary-button">Retry</button>
+              </div>
+              
+              <div class="error-option">
+                <h3>Update Google API Credentials</h3>
+                <p>Update your Google API credentials.</p>
+                <button id="update-credentials" class="secondary-button">Update Credentials</button>
+              </div>
+              
+              <div class="error-option">
+                <h3>Reset Application</h3>
+                <p>Clear all data and start fresh.</p>
+                <button id="reset-app" class="tertiary-button">Reset Application</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+      
+      document.getElementById('retry-startup').addEventListener('click', () => {
+        window.location.reload();
+      });
+      
+      document.getElementById('update-credentials').addEventListener('click', () => {
+        this.showCredentialsForm();
+      });
+      
+      document.getElementById('reset-app').addEventListener('click', async () => {
+        if (confirm('This will reset the application completely. All data will be lost. Continue?')) {
+          await this.app.storage.clear('user_data');
+          window.location.reload();
+        }
+      });
     }
   }
   
