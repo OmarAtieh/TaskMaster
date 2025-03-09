@@ -1619,3 +1619,37 @@ input:checked + .slider:before {
     margin: 0.5rem 0;
   }
 }
+/* For credential settings */
+.help-text {
+  font-size: 0.85rem;
+  color: var(--on-surface);
+  opacity: 0.7;
+  margin-top: 0.5rem;
+}
+
+.help-text ol, .help-text ul {
+  padding-left: 1.5rem;
+  margin-top: 0.5rem;
+}
+
+.help-text a {
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.help-text a:hover {
+  text-decoration: underline;
+}
+
+.status-text {
+  margin-top: 0.75rem;
+  font-size: 0.9rem;
+}
+
+.status-text.success {
+  color: #4CAF50;
+}
+
+.status-text.error {
+  color: var(--error);
+}

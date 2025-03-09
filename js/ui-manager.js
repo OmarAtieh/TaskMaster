@@ -19,126 +19,191 @@ class UIManager {
     
     // Show the initial onboarding UI
     showOnboarding() {
-      const titleThemes = [
-        { id: 'fantasy', name: 'Fantasy Adventure' },
-        { id: 'professional', name: 'Career Growth' },
-        { id: 'academic', name: 'Academic Achievement' },
-        { id: 'athletic', name: 'Athletic Progress' },
-        { id: 'spiritual', name: 'Spiritual Journey' }
-      ];
-      
-      // Replace the loading screen with onboarding UI
-      this.appElement.innerHTML = `
-        <div class="onboarding-container">
-          <div class="onboarding-header">
-            <div class="app-logo">${this.graphics.getAppLogo(80)}</div>
-            <h1>Welcome to TaskMaster</h1>
+        const titleThemes = [
+          { id: 'fantasy', name: 'Fantasy Adventure' },
+          { id: 'professional', name: 'Career Growth' },
+          { id: 'academic', name: 'Academic Achievement' },
+          { id: 'athletic', name: 'Athletic Progress' },
+          { id: 'spiritual', name: 'Spiritual Journey' }
+        ];
+        
+        // Replace the loading screen with onboarding UI
+        this.appElement.innerHTML = `
+          <div class="onboarding-container">
+            <div class="onboarding-header">
+              <div class="app-logo">${this.graphics.getAppLogo(80)}</div>
+              <h1>Welcome to TaskMaster</h1>
+            </div>
+            
+            <div class="onboarding-steps">
+              <div class="step active" id="step-1">
+                <h2>Let's personalize your experience</h2>
+                <p>Choose how TaskMaster should motivate you:</p>
+                
+                <div class="form-group">
+                  <label for="title-theme">Achievement Style:</label>
+                  <select id="title-theme" class="form-control">
+                    ${titleThemes.map(theme => 
+                      `<option value="${theme.id}">${theme.name}</option>`
+                    ).join('')}
+                  </select>
+                  <p class="help-text">This determines how your progress titles will be themed</p>
+                </div>
+                
+                <div class="form-group">
+                  <label for="theme-preference">Theme:</label>
+                  <select id="theme-preference" class="form-control">
+                    <option value="auto">Auto (Follow System)</option>
+                    <option value="light">Light</option>
+                    <option value="dark">Dark</option>
+                  </select>
+                </div>
+                
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="enable-notifications" checked>
+                    Enable notifications for task reminders
+                  </label>
+                </div>
+                
+                <div class="form-group">
+                  <label>
+                    <input type="checkbox" id="enable-sounds" checked>
+                    Enable sound effects
+                  </label>
+                </div>
+                
+                <button id="next-button" class="primary-button">Continue</button>
+              </div>
+              
+              <div class="step" id="step-2">
+                <h2>Set up Google API</h2>
+                <p>TaskMaster uses Google Sheets to securely store and sync your tasks across devices.</p>
+                <p>You'll need to provide your own Google API credentials:</p>
+                
+                <div class="form-group">
+                  <label for="google-client-id">Client ID:</label>
+                  <input type="text" id="google-client-id" class="form-control" placeholder="Your Google OAuth 2.0 Client ID">
+                </div>
+                
+                <div class="form-group">
+                  <label for="google-api-key">API Key:</label>
+                  <input type="text" id="google-api-key" class="form-control" placeholder="Your Google API Key">
+                </div>
+                
+                <div class="help-text">
+                  <strong>How to get credentials:</strong>
+                  <ol>
+                    <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                    <li>Create a project</li>
+                    <li>Enable Google Sheets API and Google Drive API</li>
+                    <li>Create OAuth 2.0 credentials and an API Key</li>
+                    <li>Add your domain to authorized JavaScript origins</li>
+                  </ol>
+                </div>
+                
+                <button id="prev-button-2" class="secondary-button">Back</button>
+                <button id="next-button-2" class="primary-button">Continue</button>
+              </div>
+              
+              <div class="step" id="step-3">
+                <h2>Connect to Google</h2>
+                <p>Now let's connect to your Google account to set up the spreadsheet.</p>
+                <p>Your data remains private in your own Google account.</p>
+                
+                <button id="google-auth-button" class="primary-button">
+                  Connect with Google
+                </button>
+                
+                <p class="help-text">We only request access to a single spreadsheet created specifically for TaskMaster.</p>
+                
+                <button id="prev-button-3" class="secondary-button">Back</button>
+              </div>
+              
+              <div class="step" id="step-4">
+                <h2>You're all set!</h2>
+                <p>TaskMaster is ready to help you be more productive.</p>
+                <p>We've set up some default categories to get you started:</p>
+                
+                <ul class="category-list">
+                  <li>Work</li>
+                  <li>Personal</li>
+                  <li>Health</li>
+                  <li>Education</li>
+                  <li>Finance</li>
+                  <li>Spiritual</li>
+                  <li>Mental Wellbeing</li>
+                </ul>
+                
+                <button id="finish-setup-button" class="primary-button">Get Started</button>
+              </div>
+            </div>
           </div>
+        `;
+        
+        // Add event listeners
+        document.getElementById('next-button').addEventListener('click', () => {
+          this.saveInitialPreferences();
+          this.showOnboardingStep(2);
+        });
+        
+        document.getElementById('prev-button-2').addEventListener('click', () => {
+          this.showOnboardingStep(1);
+        });
+        
+        document.getElementById('next-button-2').addEventListener('click', async () => {
+          const clientId = document.getElementById('google-client-id').value.trim();
+          const apiKey = document.getElementById('google-api-key').value.trim();
           
-          <div class="onboarding-steps">
-            <div class="step active" id="step-1">
-              <h2>Let's personalize your experience</h2>
-              <p>Choose how TaskMaster should motivate you:</p>
-              
-              <div class="form-group">
-                <label for="title-theme">Achievement Style:</label>
-                <select id="title-theme" class="form-control">
-                  ${titleThemes.map(theme => 
-                    `<option value="${theme.id}">${theme.name}</option>`
-                  ).join('')}
-                </select>
-                <p class="help-text">This determines how your progress titles will be themed</p>
-              </div>
-              
-              <div class="form-group">
-                <label for="theme-preference">Theme:</label>
-                <select id="theme-preference" class="form-control">
-                  <option value="auto">Auto (Follow System)</option>
-                  <option value="light">Light</option>
-                  <option value="dark">Dark</option>
-                </select>
-              </div>
-              
-              <div class="form-group">
-                <label>
-                  <input type="checkbox" id="enable-notifications" checked>
-                  Enable notifications for task reminders
-                </label>
-              </div>
-              
-              <div class="form-group">
-                <label>
-                  <input type="checkbox" id="enable-sounds" checked>
-                  Enable sound effects
-                </label>
-              </div>
-              
-              <button id="next-button" class="primary-button">Continue</button>
-            </div>
+          if (!clientId || !apiKey) {
+            alert('Please enter both Google API credentials to continue.');
+            return;
+          }
+          
+          try {
+            // Save credentials
+            await this.app.storage.set('google_client_id', clientId);
+            await this.app.storage.set('google_api_key', apiKey);
             
-            <div class="step" id="step-2">
-              <h2>Connect to Google</h2>
-              <p>TaskMaster uses Google Sheets to securely store and sync your tasks across devices.</p>
-              <p>Your data remains private in your own Google account.</p>
-              
-              <button id="google-auth-button" class="primary-button">
-                Connect with Google
-              </button>
-              
-              <p class="help-text">We only request access to a single spreadsheet created specifically for TaskMaster.</p>
-            </div>
+            // Update sync manager
+            this.app.sync.CLIENT_ID = clientId;
+            this.app.sync.API_KEY = apiKey;
             
-            <div class="step" id="step-3">
-              <h2>You're all set!</h2>
-              <p>TaskMaster is ready to help you be more productive.</p>
-              <p>We've set up some default categories to get you started:</p>
-              
-              <ul class="category-list">
-                <li>Work</li>
-                <li>Personal</li>
-                <li>Health</li>
-                <li>Education</li>
-                <li>Finance</li>
-                <li>Spiritual</li>
-                <li>Mental Wellbeing</li>
-              </ul>
-              
-              <button id="finish-setup-button" class="primary-button">Get Started</button>
-            </div>
-          </div>
-        </div>
-      `;
-      
-      // Add event listeners
-      document.getElementById('next-button').addEventListener('click', () => {
-        this.saveInitialPreferences();
-        this.showOnboardingStep(2);
-      });
-      
-      document.getElementById('google-auth-button').addEventListener('click', async () => {
-        try {
-          await this.app.sync.authorize();
-          this.showOnboardingStep(3);
-        } catch (error) {
-          console.error('Google authorization failed:', error);
-          alert('Google authorization failed: ' + error.message);
-        }
-      });
-      
-      document.getElementById('finish-setup-button').addEventListener('click', async () => {
-        try {
-          await this.completeSetup();
-        } catch (error) {
-          console.error('Setup completion failed:', error);
-          alert('Setup failed: ' + error.message);
-        }
-      });
-      
-      // Apply theme preference immediately if changed
-      document.getElementById('theme-preference').addEventListener('change', (e) => {
-        this.app.applyTheme(e.target.value);
-      });
-    }
+            this.showOnboardingStep(3);
+          } catch (error) {
+            console.error('Error saving credentials:', error);
+            alert('Error saving credentials: ' + error.message);
+          }
+        });
+        
+        document.getElementById('prev-button-3').addEventListener('click', () => {
+          this.showOnboardingStep(2);
+        });
+        
+        document.getElementById('google-auth-button').addEventListener('click', async () => {
+          try {
+            await this.app.sync.authorize();
+            this.showOnboardingStep(4);
+          } catch (error) {
+            console.error('Google authorization failed:', error);
+            alert('Google authorization failed: ' + error.message);
+          }
+        });
+        
+        document.getElementById('finish-setup-button').addEventListener('click', async () => {
+          try {
+            await this.completeSetup();
+          } catch (error) {
+            console.error('Setup completion failed:', error);
+            alert('Setup failed: ' + error.message);
+          }
+        });
+        
+        // Apply theme preference immediately if changed
+        document.getElementById('theme-preference').addEventListener('change', (e) => {
+          this.app.applyTheme(e.target.value);
+        });
+      }
     
     // Show specific onboarding step
     showOnboardingStep(stepNumber) {

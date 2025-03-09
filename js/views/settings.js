@@ -5,6 +5,20 @@ class SettingsView {
       this.app = app;
     }
     
+    getObfuscatedValue(value) {
+        if (!value) return '';
+        
+        // Show first 4 and last 4 characters, hide the rest with asterisks
+        if (value.length <= 8) return value;
+        
+        const firstChars = value.substring(0, 4);
+        const lastChars = value.substring(value.length - 4);
+        const middleLength = value.length - 8;
+        const asterisks = '*'.repeat(middleLength);
+        
+        return `${firstChars}${asterisks}${lastChars}`;
+      }
+
     async render() {
       const { preferences } = this.app;
       
@@ -156,6 +170,51 @@ class SettingsView {
                 <button id="reset-app" class="danger-button">Reset Application</button>
               </div>
             </div>
+            <div class="settings-section">
+
+            <h3 class="settings-section-title">
+                <span class="settings-icon">🔐</span>
+                Google API Credentials
+            </h3>
+            
+            <div class="setting-item">
+                <label for="google-client-id">Client ID</label>
+                <div class="setting-row">
+                <input type="password" class="form-control" id="google-client-id" value="${this.getObfuscatedValue(this.app.sync.CLIENT_ID)}" 
+                    placeholder="Enter your Google Client ID">
+                <button id="show-client-id" class="icon-button" title="Show/Hide">👁️</button>
+                </div>
+                <div class="help-text">From Google Cloud Console OAuth 2.0 credentials</div>
+            </div>
+            
+            <div class="setting-item">
+                <label for="google-api-key">API Key</label>
+                <div class="setting-row">
+                <input type="password" class="form-control" id="google-api-key" value="${this.getObfuscatedValue(this.app.sync.API_KEY)}"
+                    placeholder="Enter your Google API Key">
+                <button id="show-api-key" class="icon-button" title="Show/Hide">👁️</button>
+                </div>
+                <div class="help-text">From Google Cloud Console API Keys</div>
+            </div>
+            
+            <div class="setting-item">
+                <button id="save-credentials" class="primary-button">Save Credentials</button>
+                <div id="credentials-status" class="status-text"></div>
+            </div>
+            
+            <div class="setting-item">
+                <div class="help-text">
+                <strong>How to get credentials:</strong>
+                <ol>
+                    <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
+                    <li>Create a project</li>
+                    <li>Enable Google Sheets API and Google Drive API</li>
+                    <li>Create OAuth 2.0 credentials and an API Key</li>
+                    <li>Add your domain to authorized JavaScript origins</li>
+                </ol>
+                </div>
+            </div>
+            </div>
           </div>
         </div>
       `;
@@ -235,7 +294,69 @@ class SettingsView {
           this.resetApplication();
         }
       });
-      
+    
+    // Show/hide credentials
+    document.getElementById('show-client-id')?.addEventListener('click', () => {
+    const input = document.getElementById('google-client-id');
+    if (input.type === 'password') {
+        input.type = 'text';
+    } else {
+        input.type = 'password';
+    }
+    });
+
+    document.getElementById('show-api-key')?.addEventListener('click', () => {
+    const input = document.getElementById('google-api-key');
+    if (input.type === 'password') {
+        input.type = 'text';
+    } else {
+        input.type = 'password';
+    }
+    });
+
+    // Save credentials
+    document.getElementById('save-credentials')?.addEventListener('click', async () => {
+    const clientId = document.getElementById('google-client-id').value.trim();
+    const apiKey = document.getElementById('google-api-key').value.trim();
+    const statusElement = document.getElementById('credentials-status');
+    
+    if (!clientId || !apiKey) {
+        statusElement.textContent = 'Both fields are required';
+        statusElement.className = 'status-text error';
+        return;
+    }
+    
+    try {
+        // Save to storage
+        await this.app.storage.set('google_client_id', clientId);
+        await this.app.storage.set('google_api_key', apiKey);
+        
+        // Update in sync manager
+        this.app.sync.CLIENT_ID = clientId;
+        this.app.sync.API_KEY = apiKey;
+        
+        statusElement.textContent = 'Credentials saved successfully';
+        statusElement.className = 'status-text success';
+        
+        // If sync was previously unauthorized due to missing credentials, re-authorize
+        if (!this.app.sync.isAuthorized) {
+        setTimeout(() => {
+            statusElement.textContent = 'Attempting to authenticate with Google...';
+            this.app.sync.authorize().then(() => {
+            statusElement.textContent = 'Authentication successful!';
+            this.refreshView();
+            }).catch(error => {
+            statusElement.textContent = 'Authentication failed: ' + error.message;
+            statusElement.className = 'status-text error';
+            });
+        }, 1000);
+        }
+    } catch (error) {
+        console.error('Error saving credentials:', error);
+        statusElement.textContent = 'Error saving credentials: ' + error.message;
+        statusElement.className = 'status-text error';
+    }
+    });
       // Calculate storage usage
       this.calculateStorageUsage();
     }

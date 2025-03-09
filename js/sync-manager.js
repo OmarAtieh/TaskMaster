@@ -2,27 +2,46 @@
 
 class SyncManager {
     constructor(app) {
-      this.app = app;
-      this.storage = app.storage;
-      this.isAuthorized = false;
-      this.syncInterval = null;
-      this.gapi = null;
-      this.spreadsheetId = null;
+        this.app = app;
+        this.storage = app.storage;
+        this.isAuthorized = false;
+        this.syncInterval = null;
+        this.gapi = null;
+        this.spreadsheetId = null;
+        
+        // We'll retrieve these from storage instead of hardcoding them
+        this.CLIENT_ID = null;
+        this.API_KEY = null;
+        
+        // Define API scopes needed
+        this.SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
+        this.DISCOVERY_DOCS = [
+          'https://sheets.googleapis.com/$discovery/rest?version=v4',
+          'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
+        ];
+      }
       
-      // Google API Client ID - This needs to be replaced with your actual client ID
-      this.CLIENT_ID = 'YOUR_GOOGLE_CLIENT_ID_HERE';
-      this.API_KEY = 'YOUR_GOOGLE_API_KEY_HERE';
-      
-      // Define API scopes needed
-      this.SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
-      this.DISCOVERY_DOCS = [
-        'https://sheets.googleapis.com/$discovery/rest?version=v4',
-        'https://www.googleapis.com/discovery/v1/apis/drive/v3/rest'
-      ];
-    }
+      // Add a new method to load credentials
+        async loadCredentials() {
+            try {
+            // Load credentials from storage
+            this.CLIENT_ID = await this.storage.get('google_client_id');
+            this.API_KEY = await this.storage.get('google_api_key');
+            
+            return !!this.CLIENT_ID && !!this.API_KEY;
+            } catch (error) {
+            console.error('Error loading Google API credentials:', error);
+            return false;
+            }
+        }
     
     // Load the Google API client
     async loadGoogleApi() {
+        // First ensure we have credentials
+        const hasCredentials = await this.loadCredentials();
+        if (!hasCredentials) {
+            throw new Error('Google API credentials not configured. Please add them in Settings.');
+        }
       return new Promise((resolve, reject) => {
         // If gapi is already loaded
         if (window.gapi) {
@@ -66,19 +85,26 @@ class SyncManager {
     
     // Authorize with Google
     async authorize() {
-      try {
+        try {
+        // Check if we have credentials
+        const hasCredentials = await this.loadCredentials();
+        if (!hasCredentials) {
+            this.isAuthorized = false;
+            throw new Error('Google API credentials not configured. Please add them in Settings.');
+        }
+    
         // Load Google API if not already loaded
         await this.loadGoogleApi();
         
         // Check if already signed in
         if (this.gapi.auth2.getAuthInstance().isSignedIn.get()) {
-          this.isAuthorized = true;
-          console.log('User is already signed in to Google');
-          
-          // Get the spreadsheet ID from storage or create new sheet
-          this.spreadsheetId = await this.storage.get('spreadsheet_id');
-          
-          return true;
+            this.isAuthorized = true;
+            console.log('User is already signed in to Google');
+            
+            // Get the spreadsheet ID from storage or create new sheet
+            this.spreadsheetId = await this.storage.get('spreadsheet_id');
+            
+            return true;
         }
         
         // Try to sign in
@@ -89,11 +115,11 @@ class SyncManager {
         this.spreadsheetId = await this.storage.get('spreadsheet_id');
         
         return true;
-      } catch (error) {
+        } catch (error) {
         console.error('Google authorization failed:', error);
         this.isAuthorized = false;
         throw new Error('Failed to authorize with Google: ' + error.message);
-      }
+        }
     }
     
     // Initialize Google Sheets for the app
