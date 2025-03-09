@@ -134,8 +134,26 @@ class SyncManager {
     // Initialize Google Sheets for the app
     async initializeSheets() {
       try {
+        // Check if we're authorized
         if (!this.isAuthorized) {
-          await this.authorize();
+          const authResult = await this.authorize();
+          // If authorization failed, return a specific status
+          if (!authResult.success) {
+            return {
+              success: false,
+              reason: authResult.reason,
+              message: authResult.message
+            };
+          }
+        }
+        
+        // Make sure we have a valid gapi client
+        if (!this.gapi || !this.gapi.client) {
+          return {
+            success: false,
+            reason: 'api_not_initialized',
+            message: 'Google API client not initialized. Please refresh and try again.'
+          };
         }
         
         // If we already have a spreadsheet ID, check if it's valid
@@ -148,7 +166,7 @@ class SyncManager {
             // Spreadsheet exists and we have access
             console.log('Using existing spreadsheet:', this.spreadsheetId);
             await this.ensureSheetStructure();
-            return this.spreadsheetId;
+            return { success: true, spreadsheetId: this.spreadsheetId };
           } catch (error) {
             // Spreadsheet doesn't exist or we don't have access
             console.error('Could not access existing spreadsheet:', error);
@@ -158,16 +176,27 @@ class SyncManager {
         
         // If we don't have a valid spreadsheet ID, create a new one
         console.log('Creating new TaskMaster spreadsheet...');
-        return await this.createNewSpreadsheet();
+        const result = await this.createNewSpreadsheet();
+        return { success: true, spreadsheetId: result };
       } catch (error) {
         console.error('Error initializing sheets:', error);
-        throw new Error('Failed to initialize Google Sheets: ' + error.message);
+        return {
+          success: false,
+          reason: 'sheets_init_failed',
+          message: 'Failed to initialize Google Sheets: ' + error.message
+        };
       }
     }
     
     // Create a new spreadsheet
     async createNewSpreadsheet() {
       try {
+        // Check if Google API client is properly initialized
+        if (!this.gapi || !this.gapi.client || !this.gapi.client.sheets) {
+          throw new Error('Google Sheets API not properly initialized. Please check your API credentials.');
+        }
+        
+        // Create the spreadsheet
         const response = await this.gapi.client.sheets.spreadsheets.create({
           properties: {
             title: this.app.config.gSheetName

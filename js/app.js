@@ -123,33 +123,48 @@ class TaskMasterApp {
     
     async firstTimeSetup() {
         try {
-            this.showLoadingMessage('Setting up for first time...');
-            // Show simple onboarding UI
-            this.ui.showOnboarding();
-            
-            // Wait for Google authorization
-            await this.sync.authorize();
-            
-            // Create default categories
-            await this.categories.createDefaultCategories();
-            
-            // Initialize Google Sheet structure
-            await this.sync.initializeSheets();
-            
-            // Complete setup
-            await this.storage.set('app_initialized', true);
-            
-            // Start app normally
-            await this.normalStartup();
-            
-            // Show PWA installation prompt if appropriate
-            this.checkForPWAInstall();
+          // Show simple onboarding UI
+          this.ui.showOnboarding();
+          
+          // Wait for Google authorization
+          const authResult = await this.sync.authorize();
+          
+          // If authorization failed, handle appropriately
+          if (!authResult.success) {
+            if (authResult.reason === 'missing_credentials') {
+              this.ui.showCredentialsForm();
+            } else {
+              this.ui.showAuthError(authResult.message, () => this.firstTimeSetup());
+            }
+            return;
+          }
+          
+          // Initialize Google Sheet structure
+          const sheetResult = await this.sync.initializeSheets();
+          
+          // If sheet initialization failed, handle appropriately
+          if (!sheetResult.success) {
+            this.ui.showSheetsInitError(sheetResult.message, () => this.firstTimeSetup());
+            return;
+          }
+          
+          // Create default categories
+          await this.categories.createDefaultCategories();
+          
+          // Complete setup
+          await this.storage.set('app_initialized', true);
+          
+          // Start app normally
+          await this.normalStartup();
+          
+          // Show PWA installation prompt if appropriate
+          this.checkForPWAInstall();
         } catch (error) {
-            console.error('First-time setup failed:', error);
-            // Show retry button
-            this.showErrorScreen('Setup failed', error.message, () => this.firstTimeSetup());
+          console.error('First-time setup failed:', error);
+          // Show a user-friendly error with options
+          this.ui.showSetupOptionsError(error, () => this.firstTimeSetup());
         }
-    }
+      }
     
     async normalStartup() {
         try {
@@ -265,6 +280,115 @@ class TaskMasterApp {
             document.getElementById('retry-button').addEventListener('click', retryCallback);
         }
     }
+
+    // Show auth error with retry option
+showAuthError(message, retryCallback) {
+    this.appElement.innerHTML = `
+      <div class="error-container">
+        <div class="error-header">
+          <div class="app-logo">${this.graphics.getAppLogo(64)}</div>
+          <h1>Google Authorization Failed</h1>
+        </div>
+        
+        <div class="error-content">
+          <p>${message}</p>
+          
+          <div class="error-actions">
+            <button id="retry-auth" class="primary-button">Try Again</button>
+            <button id="setup-credentials" class="secondary-button">Update Credentials</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('retry-auth').addEventListener('click', retryCallback);
+    document.getElementById('setup-credentials').addEventListener('click', () => {
+      this.showCredentialsForm();
+    });
+  }
+  
+  // Show sheets initialization error with options
+  showSheetsInitError(message, retryCallback) {
+    this.appElement.innerHTML = `
+      <div class="error-container">
+        <div class="error-header">
+          <div class="app-logo">${this.graphics.getAppLogo(64)}</div>
+          <h1>Google Sheets Setup Failed</h1>
+        </div>
+        
+        <div class="error-content">
+          <p>${message}</p>
+          <p>This could be due to API restrictions or permissions issues.</p>
+          
+          <div class="help-text">
+            <strong>Possible solutions:</strong>
+            <ul>
+              <li>Make sure Google Sheets API is enabled in your Google Cloud project</li>
+              <li>Verify your API credentials have the correct permissions</li>
+              <li>Check that your domain is authorized in the Google Cloud Console</li>
+            </ul>
+          </div>
+          
+          <div class="error-actions">
+            <button id="retry-sheets" class="primary-button">Try Again</button>
+            <button id="update-credentials" class="secondary-button">Update Credentials</button>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('retry-sheets').addEventListener('click', retryCallback);
+    document.getElementById('update-credentials').addEventListener('click', () => {
+      this.showCredentialsForm();
+    });
+  }
+  
+  // Show a more user-friendly setup error with options
+  showSetupOptionsError(error, retryCallback) {
+    this.appElement.innerHTML = `
+      <div class="error-container">
+        <div class="error-header">
+          <div class="app-logo">${this.graphics.getAppLogo(64)}</div>
+          <h1>Setup Encountered an Issue</h1>
+        </div>
+        
+        <div class="error-content">
+          <p>${error.message || 'An error occurred during setup.'}</p>
+          
+          <div class="error-options">
+            <div class="error-option">
+              <h3>Try Again</h3>
+              <p>Retry the setup process from the beginning.</p>
+              <button id="retry-setup" class="primary-button">Retry Setup</button>
+            </div>
+            
+            <div class="error-option">
+              <h3>Update Google API Credentials</h3>
+              <p>Enter new Google API credentials.</p>
+              <button id="update-api-credentials" class="secondary-button">Update Credentials</button>
+            </div>
+            
+            <div class="error-option">
+              <h3>Start Fresh</h3>
+              <p>Reset the application and start from scratch.</p>
+              <button id="reset-app" class="tertiary-button">Reset Application</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    
+    document.getElementById('retry-setup').addEventListener('click', retryCallback);
+    document.getElementById('update-api-credentials').addEventListener('click', () => {
+      this.showCredentialsForm();
+    });
+    document.getElementById('reset-app').addEventListener('click', async () => {
+      if (confirm('This will reset the application completely. Continue?')) {
+        await this.app.storage.clear('user_data');
+        window.location.reload();
+      }
+    });
+  }
 }
 
 // Register Service Worker for offline functionality

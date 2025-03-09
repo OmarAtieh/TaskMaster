@@ -1838,3 +1838,71 @@ input:checked + .slider:before {
 .loading-content .spinner {
   margin: 0 auto 1rem;
 }
+
+/* Add to styles.css */
+
+.error-container {
+  max-width: 600px;
+  margin: 0 auto;
+  padding: 2rem;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.error-header {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.error-content {
+  background-color: var(--surface);
+  padding: 2rem;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.error-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.error-options {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.error-option {
+  padding: 1rem;
+  border: 1px solid var(--divider);
+  border-radius: 8px;
+}
+
+.error-option h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+.error-option p {
+  margin-bottom: 1rem;
+}
+
+.tertiary-button {
+  background-color: var(--surface);
+  color: var(--on-surface);
+  border: 1px solid var(--divider);
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.tertiary-button:hover {
+  background-color: var(--overlay);
+}
