@@ -37,11 +37,12 @@ class SyncManager {
     
     // Load the Google API client
     async loadGoogleApi() {
-        // First ensure we have credentials
-        const hasCredentials = await this.loadCredentials();
-        if (!hasCredentials) {
-            throw new Error('Google API credentials not configured. Please add them in Settings.');
-        }
+      // First ensure we have credentials
+      const hasCredentials = await this.loadCredentials();
+      if (!hasCredentials) {
+        throw new Error('Google API credentials not configured. Please add them in Settings.');
+      }
+      
       return new Promise((resolve, reject) => {
         // If gapi is already loaded
         if (window.gapi) {
@@ -57,22 +58,8 @@ class SyncManager {
         script.defer = true;
         script.onload = () => {
           this.gapi = window.gapi;
-          this.gapi.load('client:auth2', {
-            callback: () => {
-              this.gapi.client.init({
-                apiKey: this.API_KEY,
-                clientId: this.CLIENT_ID,
-                discoveryDocs: this.DISCOVERY_DOCS,
-                scope: this.SCOPES
-              }).then(() => {
-                resolve(this.gapi);
-              }).catch(error => {
-                reject(error);
-              });
-            },
-            onerror: () => {
-              reject(new Error('Error loading Google API client'));
-            }
+          this.gapi.load('client:auth2', () => {
+            resolve(this.gapi);
           });
         };
         script.onerror = () => {
@@ -89,7 +76,6 @@ class SyncManager {
         // Check if we have credentials
         const hasCredentials = await this.loadCredentials();
         if (!hasCredentials) {
-          // Instead of throwing an error, return a specific "missing credentials" status
           this.isAuthorized = false;
           return { 
             success: false, 
@@ -101,7 +87,18 @@ class SyncManager {
         // Load Google API if not already loaded
         await this.loadGoogleApi();
         
-        // Continue with normal authorization...
+        // Initialize the client BEFORE checking auth status
+        await this.gapi.client.init({
+          apiKey: this.API_KEY,
+          clientId: this.CLIENT_ID,
+          discoveryDocs: this.DISCOVERY_DOCS,
+          scope: this.SCOPES,
+          // Add an explicit redirect URI that matches your Google Cloud Console setting
+          // Replace this with your actual GitHub Pages URL if different
+          redirect_uri: 'https://omaratieh.github.io/TaskMaster/'
+        });
+        
+        // Continue with authorization check
         if (this.gapi.auth2.getAuthInstance().isSignedIn.get()) {
           this.isAuthorized = true;
           console.log('User is already signed in to Google');
@@ -112,8 +109,12 @@ class SyncManager {
           return { success: true };
         }
         
-        // Try to sign in
-        await this.gapi.auth2.getAuthInstance().signIn();
+        // Use signIn with additional options for more control
+        const options = {
+          prompt: 'select_account'  // Force account selection to avoid login issues
+        };
+        
+        await this.gapi.auth2.getAuthInstance().signIn(options);
         this.isAuthorized = true;
         
         // Check if we have a spreadsheet ID stored

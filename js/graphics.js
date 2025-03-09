@@ -61,26 +61,35 @@ class UIGraphics {
     
     // Generate app logo as SVG
     getAppLogo(size = 48) {
-      const primaryColor = this.colors.primary;
-      const secondaryColor = this.colors.secondary;
-      const textColor = this.colors.onPrimary;
-      
-      return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
-        <!-- Background circle -->
-        <circle cx="50" cy="50" r="48" fill="${primaryColor}" />
+        const primaryColor = this.colors.primary;
+        const secondaryColor = this.colors.secondary;
+        const textColor = this.colors.onPrimary;
         
-        <!-- Checkmark/task list styling -->
-        <path d="M30 40 L70 40 L70 46 L30 46 Z" fill="${textColor}" />
-        <path d="M30 55 L70 55 L70 61 L30 61 Z" fill="${textColor}" />
-        <path d="M30 70 L50 70 L50 76 L30 76 Z" fill="${textColor}" />
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 100 100">
+          <!-- Background Circle -->
+          <circle cx="50" cy="50" r="48" fill="${primaryColor}" />
         
-        <!-- Star corner for gamification element -->
-        <path d="M70 65 L73 76 L65 69 L75 69 L67 76 Z" fill="${secondaryColor}" />
+          <!-- Task List -->
+          <rect x="25" y="20" width="40" height="50" rx="6" ry="6" fill="${textColor}" stroke="${secondaryColor}" stroke-width="2"/>
         
-        <!-- Level indicator -->
-        <circle cx="75" cy="30" r="15" fill="${secondaryColor}" stroke="${textColor}" stroke-width="2" />
-        <text x="75" y="35" font-family="Arial" font-size="14" font-weight="bold" text-anchor="middle" fill="${textColor}">TM</text>
-      </svg>`;
+          <!-- Checkboxes -->
+          <rect x="30" y="28" width="6" height="6" rx="1" ry="1" fill="none" stroke="${secondaryColor}" stroke-width="2"/>
+          <rect x="30" y="40" width="6" height="6" rx="1" ry="1" fill="none" stroke="${secondaryColor}" stroke-width="2"/>
+          <rect x="30" y="52" width="6" height="6" rx="1" ry="1" fill="none" stroke="${secondaryColor}" stroke-width="2"/>
+        
+          <!-- Checkmarks -->
+          <path d="M31 30 L33 33 L35 27" stroke="${secondaryColor}" stroke-width="2" fill="none"/>
+          <path d="M31 42 L33 45 L35 39" stroke="${secondaryColor}" stroke-width="2" fill="none"/>
+        
+          <!-- Task List Lines -->
+          <line x1="40" y1="30" x2="60" y2="30" stroke="${secondaryColor}" stroke-width="2"/>
+          <line x1="40" y1="42" x2="60" y2="42" stroke="${secondaryColor}" stroke-width="2"/>
+          <line x1="40" y1="54" x2="52" y2="54" stroke="${secondaryColor}" stroke-width="2"/>
+        
+          <!-- Lightning Bolt (Offset for Balance) -->
+          <polygon points="58,60 72,65 62,78 74,78 50,95 58,80 45,80" 
+            fill="${secondaryColor}" stroke="${textColor}" stroke-width="2"/>
+        </svg>`;        
     }
     
     // Generate favicon for browser tabs
