@@ -321,7 +321,7 @@ class SyncManager {
       return {
         success: false,
         reason: 'sheets_init_failed',
-        message: 'Failed to initialize Google Sheets: ' + error.message
+        message: 'Failed to initialize Google Sheets: ' + (error.message || 'Unknown error')
       };
     }
   }
@@ -334,10 +334,43 @@ class SyncManager {
         throw new Error('Google Sheets API not properly initialized. Please check your API credentials.');
       }
       
+      // IMPORTANT: Verify we have a valid token
+      const token = this.gapi.client.getToken();
+      if (!token || !token.access_token) {
+        console.log('No valid token found, requesting a new one');
+        
+        // If we don't have a token client, we can't proceed
+        if (!this.tokenClient) {
+          throw new Error('Token client not initialized and no valid token available');
+        }
+        
+        // Request a token and wait for it
+        await new Promise((resolve, reject) => {
+          const timeout = setTimeout(() => {
+            reject(new Error('Token request timed out'));
+          }, 60000);
+          
+          this.tokenClient.callback = (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              this.gapi.client.setToken(tokenResponse);
+              clearTimeout(timeout);
+              resolve();
+            } else {
+              clearTimeout(timeout);
+              reject(new Error('Failed to get access token'));
+            }
+          };
+          
+          this.tokenClient.requestAccessToken({prompt: 'consent'});
+        });
+      }
+      
+      console.log('Creating spreadsheet with token:', !!this.gapi.client.getToken());
+      
       // Create the spreadsheet
       const response = await this.gapi.client.sheets.spreadsheets.create({
         properties: {
-          title: this.app.config.gSheetName
+          title: this.app.config.gSheetName || 'TaskMaster-Data'
         },
         sheets: [
           {
@@ -375,6 +408,10 @@ class SyncManager {
         ]
       });
       
+      if (!response || !response.result) {
+        throw new Error('No response received when creating spreadsheet');
+      }
+      
       this.spreadsheetId = response.result.spreadsheetId;
       
       // Save the spreadsheet ID
@@ -387,7 +424,10 @@ class SyncManager {
       return this.spreadsheetId;
     } catch (error) {
       console.error('Error creating spreadsheet:', error);
-      throw new Error('Failed to create spreadsheet: ' + error.message);
+      const errorMessage = error.result ? 
+                           JSON.stringify(error.result) : 
+                           (error.message || 'Unknown error');
+      throw new Error('Failed to create spreadsheet: ' + errorMessage);
     }
   }
   
