@@ -1,4 +1,5 @@
 // app.js - Main Application Entry Point
+const APP_VERSION = '0.0.1';
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -57,6 +58,7 @@ class TaskMasterApp {
             this.taskForm = new TaskForm(this);
             this.dailyMissions = new DailyMissionManager(this);
             
+            document.getElementById('version-display').textContent = `v${APP_VERSION}`;
             this.showLoadingMessage('Modules loaded...');
             
             // Initialize UI manager last (depends on other modules)
@@ -410,6 +412,7 @@ showAuthError(message, retryCallback) {
       return false;
     }
   }
+  
 }
 
 // Register Service Worker for offline functionality
