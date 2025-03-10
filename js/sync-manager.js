@@ -205,12 +205,12 @@ async loadGoogleApi() {
     try {
         console.log("Starting authorization process...");
 
-        // Load API credentials from storage
+        // Ensure credentials are loaded before proceeding
         this.CLIENT_ID = this.CLIENT_ID || await this.storage.get("google_client_id");
         this.API_KEY = this.API_KEY || await this.storage.get("google_api_key");
 
         if (!this.CLIENT_ID || !this.API_KEY) {
-            console.error("Google API credentials missing. Ensure they are set in settings.");
+            console.error("Google API credentials missing. Check Google Cloud Console.");
             return { success: false, reason: "missing_credentials", message: "Google API credentials are required." };
         }
 
@@ -261,37 +261,24 @@ async loadGoogleApi() {
             this.tokenClient = google.accounts.oauth2.initTokenClient({
                 client_id: this.CLIENT_ID,
                 scope: this.SCOPES,
-                ux_mode: "redirect",
+                ux_mode: "redirect",  // Changed from "popup" to "redirect"
                 redirect_uri: window.location.href.split("#")[0]
             });
         }
 
-        // Trigger OAuth login request
-        return new Promise((resolve) => {
-            this.tokenClient.requestAccessToken({ prompt: "consent" });
+        // Trigger OAuth login via redirect
+        this.tokenClient.requestAccessToken({ prompt: "consent" });
 
-            // Check if authorization completes within 60 seconds
-            const checkInterval = setInterval(() => {
-                if (this.isAuthorized) {
-                    clearInterval(checkInterval);
-                    resolve({ success: true });
-                }
-            }, 500);
+        // Authorization process will complete after redirect
+        return { success: false, reason: "auth_redirect", message: "Redirecting to Google for authentication." };
 
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                resolve({
-                    success: false,
-                    reason: "auth_timeout",
-                    message: "Authorization request timed out. Please try again."
-                });
-            }, 60000);
-        });
     } catch (error) {
         console.error("Authorization failed:", error);
         return { success: false, reason: "auth_error", message: error.message || "Unknown error" };
     }
 }
+
+
 
   
   // Get spreadsheet ID from storage or create a new one

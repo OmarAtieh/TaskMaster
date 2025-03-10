@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '11'; // Can be incremented with each build
+const BUILD_NUMBER = '12'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -373,7 +373,7 @@ class TaskMasterApp {
             const hash = window.location.hash;
             if (hash && hash.includes('access_token')) {
                 console.log('Detected token in URL - coming back from auth redirect');
-    
+                
                 // Parse token from URL
                 const params = new URLSearchParams(hash.substring(1));
                 const accessToken = params.get("access_token");
@@ -444,7 +444,8 @@ class TaskMasterApp {
             console.error("Application initialization failed:", error);
             this.showErrorScreen("Initialization failed", error.message);
         }
-    }    
+    }
+    
     
     async loadPreferences() {
         // Get stored preferences or use defaults
