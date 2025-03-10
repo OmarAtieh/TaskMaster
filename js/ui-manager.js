@@ -1195,6 +1195,23 @@ class UIManager {
         }
       });
     }
+
+      showCredentialEntryScreen() {
+        const appElement = document.getElementById('app');
+        appElement.innerHTML = `
+            <div class="auth-error-screen">
+                <h2>Google Authentication Required</h2>
+                <p>Authentication failed or was cancelled. You need to enter credentials again.</p>
+                <button id="retry-auth" class="primary-button">Re-enter Credentials</button>
+            </div>
+        `;
+    
+        document.getElementById("retry-auth").addEventListener("click", async () => {
+            console.log("User opted to re-enter credentials.");
+            this.app.storage.clearOAuthCredentialsAndRetry();
+        });
+    }
+  
   }
   
   // Export the class if in Node.js environment

@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '14'; // Can be incremented with each build
+const BUILD_NUMBER = '15'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -337,6 +337,16 @@ class TaskMasterApp {
             this.storage = new StorageManager();
             await this.storage.initialize();
     
+            // Retrieve and validate client_id
+            this.CLIENT_ID = await this.storage.get("google_client_id");
+            this.API_KEY = await this.storage.get("google_api_key");
+    
+            if (!this.CLIENT_ID || !this.API_KEY) {
+                console.warn("Google API credentials missing. Redirecting to credential entry.");
+                this.showCredentialEntryScreen();
+                return;
+            }
+    
             // Check if OAuth token is in the URL after redirect
             const hash = window.location.hash;
             if (hash.includes("access_token")) {
@@ -355,16 +365,6 @@ class TaskMasterApp {
                     window.history.replaceState({}, document.title, window.location.pathname);
                 }
             }
-    
-            // Continue normal app initialization...
-            this.CLIENT_ID = await this.storage.get("google_client_id");
-            this.API_KEY = await this.storage.get("google_api_key");
-    
-            if (!this.CLIENT_ID || !this.API_KEY) {
-                console.warn("Google API credentials missing. They will be requested during setup.");
-            }
-    
-            this.showLoadingMessage("Initializing...");
     
             this.preferences = await this.loadPreferences();
     
@@ -389,6 +389,7 @@ class TaskMasterApp {
     
         } catch (error) {
             console.error("Initialization failed:", error);
+            this.ui.showAuthError("Initialization failed. Click retry to re-enter credentials.", () => this.showCredentialEntryScreen());
         }
     }    
     

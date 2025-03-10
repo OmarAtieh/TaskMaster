@@ -217,6 +217,8 @@ async loadGoogleApi() {
         await this.loadGoogleApi();
         await this.initializeGapiClient();
 
+        console.log("Checking stored OAuth token...");
+
         // Check for existing valid token
         const storedToken = localStorage.getItem("oauth_token");
         const storedExpiry = localStorage.getItem("oauth_token_expiry");
@@ -240,16 +242,37 @@ async loadGoogleApi() {
             &include_granted_scopes=true
             &prompt=consent`;
 
+        console.log("Redirecting to OAuth:", authUrl);
+
         window.location.href = authUrl;
         return { success: false, reason: "auth_redirect", message: "Redirecting to Google for authentication." };
 
     } catch (error) {
         console.error("Authorization failed:", error);
+
+        // Show error with retry option
+        this.app.ui.showAuthError(
+            `Authentication failed: ${error.message}`,
+            () => this.clearOAuthCredentialsAndRetry()
+        );
+
         return { success: false, reason: "auth_error", message: error.message || "Unknown error" };
     }
 }
 
-  
+  //Clears only OAuth-related credentials and retries authentication.
+  clearOAuthCredentialsAndRetry() {
+      console.warn("Clearing OAuth credentials and retrying...");
+
+      // Remove only OAuth credentials
+      localStorage.removeItem("oauth_token");
+      localStorage.removeItem("oauth_token_expiry");
+
+      // Redirect back to credential entry or reattempt authentication
+      this.app.showCredentialEntryScreen();
+  }
+
+
   // Get spreadsheet ID from storage or create a new one
   async getSpreadsheetId() {
       this.spreadsheetId = await this.storage.get('spreadsheet_id');
