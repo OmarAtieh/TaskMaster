@@ -1069,34 +1069,45 @@ class UIManager {
   }
   
   showAuthPrompt(authCallback) {
-      console.log("Displaying authentication prompt...");
+    console.log("Displaying authentication prompt...");
 
       const appElement = document.getElementById("app");
 
+      // Render the authentication UI
       appElement.innerHTML = `
           <div class="auth-screen">
               <h2>Connect to Google</h2>
               <p>Please authenticate to use TaskMaster.</p>
 
               <button id="login-button" class="primary-button">Login with Google</button>
-              
+              <button id="skip-button" class="secondary-button">Skip for now</button>
+
               <label class="checkbox-container">
                   <input type="checkbox" id="auto-login-checkbox">
-                  Do not require user interaction to log in the future
+                  <span>Do not require user interaction to log in the future</span>
               </label>
           </div>
       `;
 
+      // Handle login button click
       document.getElementById("login-button").addEventListener("click", () => {
           console.log("User clicked login...");
 
-          // ✅ Save preference for auto-login
+          // Save auto-login preference
           const autoLoginEnabled = document.getElementById("auto-login-checkbox").checked;
           this.app.storage.set("auto_login", autoLoginEnabled.toString());
 
-          authCallback(); // Start authentication
+          // Trigger authentication with user consent
+          authCallback(true);
+      });
+
+      // Allow the user to explicitly skip authentication for now
+      document.getElementById("skip-button").addEventListener("click", () => {
+          console.log("User skipped authentication.");
+          authCallback(false);
       });
   }
+
 
 
       showAuthError(message, retryCallback) {

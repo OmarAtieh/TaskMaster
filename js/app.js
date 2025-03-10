@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '18'; // Can be incremented with each build
+const BUILD_NUMBER = '19'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -357,16 +357,23 @@ class TaskMasterApp {
     
             console.log("Credentials validated. Waiting for user authentication...");
     
-            // ✅ If auto-login is enabled, attempt authentication immediately
+            // If auto-login is enabled, attempt authentication immediately
             if (this.AUTO_LOGIN) {
                 console.log("Auto-login is enabled. Attempting authentication...");
                 this.sync.authorize();
             } else {
-                console.log("Auto-login is disabled. Waiting for user authentication...");
-                this.ui.showAuthPrompt(() => {
-                    console.log("User clicked authenticate...");
-                    this.sync.authorize();
-                });
+              console.log("Auto-login is disabled. Waiting for user authentication...");
+
+              // Do not trigger authentication automatically
+                this.ui.showAuthPrompt((userWantsToAuthenticate) => {
+                  if (userWantsToAuthenticate) {
+                      console.log("User clicked authenticate...");
+                      this.sync.authorize();
+                  } else {
+                      console.log("User chose not to authenticate. Awaiting user action.");
+                  }
+              });
+              
             }
     
             this.preferences = await this.loadPreferences();
