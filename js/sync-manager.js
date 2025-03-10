@@ -107,22 +107,26 @@ class SyncManager {
   
   // Initialize the Token Client for OAuth
   initializeTokenClient() {
-      this.tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: this.CLIENT_ID,
-          scope: this.SCOPES,
-          callback: (tokenResponse) => {
-              if (tokenResponse && tokenResponse.access_token) {
-                  // Token received successfully
-                  this.isAuthorized = true;
-                  // You can store the token or just use it directly
-                  console.log('Successfully obtained access token');
-              }
-          },
-          error_callback: (error) => {
-              console.error('Error obtaining access token:', error);
-              this.isAuthorized = false;
-          }
-      });
+    this.tokenClient = google.accounts.oauth2.initTokenClient({
+      client_id: this.CLIENT_ID,
+      scope: this.SCOPES,
+      prompt: 'consent',  // Force consent screen to ensure we get refresh tokens
+      callback: (tokenResponse) => {
+        if (tokenResponse && tokenResponse.access_token) {
+          // Token received successfully
+          this.isAuthorized = true;
+          
+          // Important: Set the access token for GAPI to use in requests
+          this.gapi.client.setToken(tokenResponse);
+          
+          console.log('Successfully obtained access token');
+        }
+      },
+      error_callback: (error) => {
+        console.error('Error obtaining access token:', error);
+        this.isAuthorized = false;
+      }
+    });
   }
   
   // Authorize with Google
@@ -167,48 +171,59 @@ class SyncManager {
           } catch (error) {
               // If error code is 401 or 403, we need a new token
               if (error.status === 401 || error.status === 403) {
-                  // Request a new access token
-                  this.tokenClient.requestAccessToken();
-                  
-                  // This is asynchronous - we'll need to wait for the callback
-                  return new Promise((resolve) => {
-                      // Set up a timeout in case authorization takes too long
-                      const timeout = setTimeout(() => {
-                          resolve({ 
-                              success: false, 
-                              reason: 'auth_timeout',
-                              message: 'Authorization timed out' 
-                          });
-                      }, 60000); // 1 minute timeout
-                      
-                      // Set up an interval to check if we've been authorized
-                      const interval = setInterval(() => {
-                          if (this.isAuthorized) {
-                              clearTimeout(timeout);
-                              clearInterval(interval);
-                              this.getSpreadsheetId().then(() => {
-                                  resolve({ success: true });
-                              });
-                          }
-                      }, 500); // Check every 500ms
-                  });
-              } else if (error.status === 404) {
-                  // This is expected with our dummy ID - it means we have a valid token
-                  this.isAuthorized = true;
-                  console.log('User has a valid token');
-                  
-                  // Get the spreadsheet ID from storage
-                  this.spreadsheetId = await this.storage.get('spreadsheet_id');
-                  
-                  return { success: true };
-              } else {
-                  // Some other error
-                  console.error('Error checking authorization:', error);
-                  return { 
+                console.log('Need to request a new token');
+                
+                // Return a promise that resolves when we get the token
+                return new Promise((resolve) => {
+                  // Set up a timeout in case authorization takes too long
+                  const timeout = setTimeout(() => {
+                    resolve({ 
                       success: false, 
-                      reason: 'auth_error',
-                      message: 'Failed to check authorization: ' + error.message 
-                  };
+                      reason: 'auth_timeout',
+                      message: 'Authorization timed out' 
+                    });
+                  }, 60000); // 1 minute timeout
+                  
+                  // Request the token
+                  this.tokenClient.requestAccessToken({
+                    prompt: 'consent'
+                  });
+                  
+                  // Set up an interval to check if we've been authorized
+                  const interval = setInterval(() => {
+                    if (this.isAuthorized) {
+                      clearTimeout(timeout);
+                      clearInterval(interval);
+                      
+                      // Important: Verify we can actually use the token
+                      this.gapi.client.sheets.spreadsheets.get({
+                        spreadsheetId: 'dummy-id-for-test'
+                      }).then(
+                        () => {
+                          // This would actually fail with 404, which is good!
+                          this.getSpreadsheetId().then(() => {
+                            resolve({ success: true });
+                          });
+                        },
+                        (err) => {
+                          // If we get a 404, it's actually good - it means our token is working
+                          if (err.status === 404) {
+                            this.getSpreadsheetId().then(() => {
+                              resolve({ success: true });
+                            });
+                          } else {
+                            // Some other error with the token
+                            resolve({
+                              success: false,
+                              reason: 'token_error',
+                              message: 'Error validating token: ' + err.message
+                            });
+                          }
+                        }
+                      );
+                    }
+                  }, 500); // Check every 500ms
+                });
               }
           }
       } catch (error) {

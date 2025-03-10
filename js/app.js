@@ -1,5 +1,5 @@
 // app.js - Main Application Entry Point
-const APP_VERSION = '0.0.2';
+const APP_VERSION = '0.0.3';
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -38,7 +38,7 @@ class TaskMasterApp {
             
             // Show loading message
             this.showLoadingMessage('Initializing...');
-
+      
             // Initialize storage - we need this first
             this.storage = new StorageManager();
             await this.storage.initialize();
@@ -64,6 +64,9 @@ class TaskMasterApp {
             // Initialize UI manager last (depends on other modules)
             this.ui = new UIManager(this);
             
+            // Ensure all required UI methods exist
+            this.ensureUIMethodsExist();
+            
             // Check if this is first run
             const isFirstRun = !(await this.storage.get('app_initialized'));
             if (isFirstRun) {
@@ -75,7 +78,7 @@ class TaskMasterApp {
             console.error('Application initialization failed:', error);
             this.showErrorScreen('Initialization failed', error.message);
         }
-    }
+      }
     
     async loadPreferences() {
         // Get stored preferences or use defaults
@@ -212,7 +215,7 @@ class TaskMasterApp {
             this.initialized = true;
             
             // Check for pending notifications
-            this.notifications.checkForPendingNotifications();
+            this.notifications.checkPendingNotifications();
         } catch (error) {
             console.error('Normal startup failed:', error);
             this.showErrorScreen('Startup failed', error.message);
