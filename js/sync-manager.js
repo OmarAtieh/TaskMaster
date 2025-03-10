@@ -131,110 +131,131 @@ class SyncManager {
   
   // Authorize with Google
   async authorize() {
-      try {
-          // Check if we have credentials
-          const hasCredentials = await this.loadCredentials();
-          if (!hasCredentials) {
-              this.isAuthorized = false;
-              return { 
-                  success: false, 
-                  reason: 'missing_credentials',
-                  message: 'Google API credentials not configured.' 
-              };
-          }
-          
-          // Load the required libraries
-          await this.loadGoogleApi();
-          
-          // Initialize the GAPI client
-          await this.initializeGapiClient();
-          
-          // Initialize the token client if needed
-          if (!this.tokenClient) {
-              this.initializeTokenClient();
-          }
-          
-          // Check if we're already authorized by checking for an existing token
-          try {
-              const tokenCheck = await this.gapi.client.sheets.spreadsheets.get({
-                  spreadsheetId: 'dummy-id-for-test'
-              });
-              
-              // If we get here without an error, we already have a valid token
-              this.isAuthorized = true;
-              console.log('User already has a valid token');
-              
-              // Get the spreadsheet ID from storage
-              this.spreadsheetId = await this.storage.get('spreadsheet_id');
-              
-              return { success: true };
-          } catch (error) {
-              // If error code is 401 or 403, we need a new token
-              if (error.status === 401 || error.status === 403) {
-                console.log('Need to request a new token');
-                
-                // Return a promise that resolves when we get the token
-                return new Promise((resolve) => {
-                  // Set up a timeout in case authorization takes too long
-                  const timeout = setTimeout(() => {
-                    resolve({ 
-                      success: false, 
-                      reason: 'auth_timeout',
-                      message: 'Authorization timed out' 
-                    });
-                  }, 60000); // 1 minute timeout
-                  
-                  // Request the token
-                  this.tokenClient.requestAccessToken({
-                    prompt: 'consent'
-                  });
-                  
-                  // Set up an interval to check if we've been authorized
-                  const interval = setInterval(() => {
-                    if (this.isAuthorized) {
-                      clearTimeout(timeout);
-                      clearInterval(interval);
-                      
-                      // Important: Verify we can actually use the token
-                      this.gapi.client.sheets.spreadsheets.get({
-                        spreadsheetId: 'dummy-id-for-test'
-                      }).then(
-                        () => {
-                          // This would actually fail with 404, which is good!
-                          this.getSpreadsheetId().then(() => {
-                            resolve({ success: true });
-                          });
-                        },
-                        (err) => {
-                          // If we get a 404, it's actually good - it means our token is working
-                          if (err.status === 404) {
-                            this.getSpreadsheetId().then(() => {
-                              resolve({ success: true });
-                            });
-                          } else {
-                            // Some other error with the token
-                            resolve({
-                              success: false,
-                              reason: 'token_error',
-                              message: 'Error validating token: ' + err.message
-                            });
-                          }
-                        }
-                      );
-                    }
-                  }, 500); // Check every 500ms
-                });
-              }
-          }
-      } catch (error) {
-          console.error('Google authorization failed:', error);
-          this.isAuthorized = false;
-          return { 
-              success: false, 
-              reason: 'auth_error',
-              message: 'Failed to authorize with Google: ' + error.message 
-          };
+    try {
+      // Check if we have credentials
+      const hasCredentials = await this.loadCredentials();
+      if (!hasCredentials) {
+        this.isAuthorized = false;
+        return { 
+          success: false, 
+          reason: 'missing_credentials',
+          message: 'Google API credentials not configured.' 
+        };
       }
+      
+      // Load the required libraries
+      await this.loadGoogleApi();
+      
+      // Initialize the GAPI client
+      await this.gapi.client.init({
+        apiKey: this.API_KEY,
+        discoveryDocs: this.DISCOVERY_DOCS
+      });
+      
+      // Initialize the token client if needed
+      if (!this.tokenClient && window.google && window.google.accounts) {
+        this.tokenClient = google.accounts.oauth2.initTokenClient({
+          client_id: this.CLIENT_ID,
+          scope: this.SCOPES,
+          callback: (tokenResponse) => {
+            if (tokenResponse && tokenResponse.access_token) {
+              // Token received successfully
+              this.isAuthorized = true;
+              // Set the token for GAPI to use
+              this.gapi.client.setToken(tokenResponse);
+              console.log('Successfully obtained access token');
+            }
+          },
+          error_callback: (error) => {
+            console.error('Error obtaining access token:', error);
+            this.isAuthorized = false;
+          }
+        });
+      }
+      
+      // Check if we're already authorized
+      try {
+        const tokenCheck = await this.gapi.client.sheets.spreadsheets.get({
+          spreadsheetId: 'dummy-id-for-test'
+        });
+        
+        // If we get here without an error, we already have a valid token
+        this.isAuthorized = true;
+        console.log('User already has a valid token');
+        
+        // Get the spreadsheet ID from storage
+        this.spreadsheetId = await this.storage.get('spreadsheet_id');
+        
+        return { success: true };
+      } catch (error) {
+        // Expected 404 error for dummy ID test - which is actually good!
+        if (error.status === 404) {
+          this.isAuthorized = true;
+          console.log('User has a valid token (404 is expected and good)');
+          
+          // Get the spreadsheet ID from storage
+          this.spreadsheetId = await this.storage.get('spreadsheet_id');
+          
+          return { success: true };
+        }
+        
+        // If error code is 401 or 403, we need a new token
+        if (error.status === 401 || error.status === 403) {
+          console.log('Need to request a new token');
+          
+          // If we don't have a token client, we can't proceed
+          if (!this.tokenClient) {
+            return {
+              success: false,
+              reason: 'no_token_client',
+              message: 'Token client not initialized properly'
+            };
+          }
+          
+          // Return a promise that resolves when we get the token
+          return new Promise((resolve) => {
+            // Request a token
+            this.tokenClient.requestAccessToken({
+              prompt: 'consent'
+            });
+            
+            // Set up a timeout in case authorization takes too long
+            const timeout = setTimeout(() => {
+              resolve({ 
+                success: false, 
+                reason: 'auth_timeout',
+                message: 'Authorization timed out' 
+              });
+            }, 60000); // 1 minute timeout
+            
+            // Set up an interval to check if we've been authorized
+            const interval = setInterval(() => {
+              if (this.isAuthorized) {
+                clearTimeout(timeout);
+                clearInterval(interval);
+                resolve({ success: true });
+              }
+            }, 500); // Check every 500ms
+          });
+        } else {
+          // Some other error
+          console.error('Error checking authorization:', error);
+          return { 
+            success: false, 
+            reason: 'auth_error',
+            message: 'Failed to check authorization: ' + (error.message || 'Unknown error') 
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Google authorization failed:', error);
+      this.isAuthorized = false;
+      return { 
+        success: false, 
+        reason: 'auth_error',
+        message: 'Failed to authorize with Google: ' + (error.message || 'Unknown error') 
+      };
+    }
   }
   
   // Get spreadsheet ID from storage or create a new one
