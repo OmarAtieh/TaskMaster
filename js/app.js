@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '15'; // Can be incremented with each build
+const BUILD_NUMBER = '16'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -337,24 +337,31 @@ class TaskMasterApp {
             this.storage = new StorageManager();
             await this.storage.initialize();
     
-            // Retrieve client_id and api_key, ensuring they are not empty
+            // Ensure UIManager is initialized early
+            this.ui = new UIManager(this);
+    
+            // Retrieve stored credentials
             this.CLIENT_ID = await this.storage.get("google_client_id");
             this.API_KEY = await this.storage.get("google_api_key");
     
-            if (!this.CLIENT_ID || !this.API_KEY) {
+            if (!this.CLIENT_ID || !this.API_KEY || this.CLIENT_ID.trim() === "" || this.API_KEY.trim() === "") {
                 console.warn("Google API credentials missing. Prompting user for input.");
-                this.showCredentialEntryScreen(); // Ask user for credentials
-                return;
+                return this.ui.showCredentialEntryScreen();
             }
     
-            // Display authentication prompt instead of auto-starting OAuth
-            this.ui.showAuthPrompt(() => {
-                console.log("User initiated authentication...");
-                this.sync.authorize();
-            });
+            console.log("Credentials validated. Waiting for user authentication...");
+    
+            // Wait for user to manually start authentication
+            if (typeof this.ui.showAuthPrompt === "function") {
+                this.ui.showAuthPrompt(() => {
+                    console.log("User clicked authenticate...");
+                    this.sync.authorize();
+                });
+            } else {
+                console.error("showAuthPrompt function is missing in UIManager.");
+            }
     
             this.preferences = await this.loadPreferences();
-    
             this.graphics = new UIGraphics(this.preferences.theme);
             this.sound = new SoundEffects();
             this.tasks = new TaskManager(this);
@@ -365,8 +372,6 @@ class TaskMasterApp {
             this.taskForm = new TaskForm(this);
             this.dailyMissions = new DailyMissionManager(this);
     
-            this.ui = new UIManager(this);
-    
             const isFirstRun = !(await this.storage.get("app_initialized"));
             if (isFirstRun) {
                 await this.firstTimeSetup();
@@ -376,7 +381,11 @@ class TaskMasterApp {
     
         } catch (error) {
             console.error("Initialization failed:", error);
-            this.ui.showAuthError("Initialization failed. Click retry to re-enter credentials.", () => this.showCredentialEntryScreen());
+            if (typeof this.ui.showAuthError === "function") {
+                this.ui.showAuthError("Initialization failed. Click retry to re-enter credentials.", () => this.ui.showCredentialEntryScreen());
+            } else {
+                console.error("showAuthError function is missing in UIManager.");
+            }
         }
     }
     
