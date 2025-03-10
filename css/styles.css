@@ -2004,3 +2004,38 @@ input:checked + .slider:before {
     column-count: 1;
   }
 }
+.app-footer {
+  padding: 10px 0;
+  font-size: 0.8rem;
+  text-align: center;
+  background-color: var(--footer-bg, #f5f5f5);
+  color: var(--footer-text, #666);
+  border-top: 1px solid var(--border-color, #ddd);
+}
+
+.footer-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 15px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.version-tag {
+  font-family: monospace;
+  padding: 2px 5px;
+  border-radius: 3px;
+  background-color: var(--version-bg, #eee);
+  color: var(--version-text, #555);
+}
+
+@media (prefers-color-scheme: dark) {
+  [data-theme="dark"] .app-footer {
+    --footer-bg: #222;
+    --footer-text: #aaa;
+    --border-color: #333;
+    --version-bg: #333;
+    --version-text: #aaa;
+  }
+}

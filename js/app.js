@@ -1,5 +1,7 @@
 // app.js - Main Application Entry Point
-const APP_VERSION = '0.0.3';
+const APP_VERSION = '0.0.4'; // Increment this with each change
+const BUILD_DATE = '2025-03-10';
+const BUILD_NUMBER = '1'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -26,6 +28,28 @@ class TaskMasterApp {
         // Initialize modules
         this.initializeApp();
     }
+
+    logAppVersion() {
+        // Log version info to console
+        console.log(
+          `%c TaskMaster v${APP_VERSION} (Build #${BUILD_NUMBER} - ${BUILD_DATE}) %c`,
+          'background: #4a6fa5; color: white; padding: 5px; border-radius: 3px; font-weight: bold;',
+          'color: #4a6fa5;'
+        );
+        
+        // Log environment details
+        console.log(`Running on: ${navigator.userAgent}`);
+        console.log(`PWA installed: ${window.matchMedia('(display-mode: standalone)').matches ? 'Yes' : 'No'}`);
+        
+        // Ensure the version is displayed in the UI
+        const versionDisplay = document.getElementById('version-display');
+        if (versionDisplay) {
+          versionDisplay.textContent = `v${APP_VERSION} (${BUILD_NUMBER})`;
+          versionDisplay.title = `Built on ${BUILD_DATE}`;
+        } else {
+          console.warn('Version display element not found in the DOM');
+        }
+      }
     
     async initializeApp() {
         try {
@@ -58,14 +82,12 @@ class TaskMasterApp {
             this.taskForm = new TaskForm(this);
             this.dailyMissions = new DailyMissionManager(this);
             
-            document.getElementById('version-display').textContent = `v${APP_VERSION}`;
+
+            this.logAppVersion();
             this.showLoadingMessage('Modules loaded...');
             
             // Initialize UI manager last (depends on other modules)
             this.ui = new UIManager(this);
-            
-            // Ensure all required UI methods exist
-            this.ensureUIMethodsExist();
             
             // Check if this is first run
             const isFirstRun = !(await this.storage.get('app_initialized'));
