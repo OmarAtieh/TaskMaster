@@ -408,19 +408,19 @@ async loadGoogleApi() {
       // IMPORTANT: Verify we have a valid token
       const token = this.gapi.client.getToken();
       if (!token || !token.access_token) {
-        // Check if we have a stored token from redirect
-        const storedToken = localStorage.getItem('oauth_token');
-        const tokenExpiry = localStorage.getItem('oauth_token_expiry');
+        console.log('No valid token found, requesting a new one');
         
-        if (storedToken && tokenExpiry && parseInt(tokenExpiry) > Date.now()) {
-          console.log('Using stored token from redirect');
-          this.gapi.client.setToken({
-            access_token: storedToken,
-            expires_in: Math.floor((parseInt(tokenExpiry) - Date.now()) / 1000)
-          });
-        } else {
-          console.log('No valid token found, requesting a new one');
-          // Rest of your existing code for redirect...
+        // Request authorization directly
+        const authResult = await this.authorize();
+        if (!authResult || !authResult.success) {
+          throw new Error('Failed to obtain OAuth token: ' + 
+            (authResult ? authResult.message : 'No auth result'));
+        }
+        
+        // Verify token again after authorization
+        const newToken = this.gapi.client.getToken();
+        if (!newToken || !newToken.access_token) {
+          throw new Error('Failed to obtain valid token after authorization');
         }
       }
       

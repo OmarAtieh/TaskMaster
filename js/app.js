@@ -330,11 +330,24 @@ class TaskMasterApp {
         }
       }
     
-    async initializeApp() {
+      async initializeApp() {
         try {
 
-            // Set up appElement and basic UI fallbacks right away
+            // Set up appElement right away
             this.appElement = document.getElementById('app') || document.body;
+            
+            // Create UI fallbacks immediately
+            if (!this.ui) this.ui = {};
+            if (!this.ui.showSheetsInitError) {
+              this.ui.showSheetsInitError = (message, retryCallback) => {
+                this.showErrorScreen('Google Sheets Setup Failed', message, retryCallback);
+              };
+            }
+            if (!this.ui.showAuthError) {
+              this.ui.showAuthError = (message, retryCallback) => {
+                this.showErrorScreen('Authentication Failed', message, retryCallback);
+              };
+            }
             this.ensureUIMethodsExist();
             
             // Process URL hash first to see if we're coming back from authentication
