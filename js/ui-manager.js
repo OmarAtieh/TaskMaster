@@ -980,20 +980,58 @@ class UIManager {
           
           // Try to authorize with the new credentials
           this.showLoadingOverlay('Connecting to Google...');
-          const authResult = await this.app.sync.authorize();
           
-          if (!authResult.success) {
-            alert('Credentials saved, but authorization failed: ' + authResult.message);
+          try {
+            const authResult = await this.app.sync.authorize();
+            
+            // Add explicit null/undefined check
+            if (!authResult) {
+              throw new Error('Authorization returned no result');
+            }
+            
+            if (authResult.success) {
+              // Authorization successful
+              this.showLoadingOverlay('Setting up Google Sheets...');
+              
+              try {
+                // Try to initialize sheets
+                const sheetResult = await this.app.sync.initializeSheets();
+                
+                if (!sheetResult) {
+                  throw new Error('Sheet initialization returned no result');
+                }
+                
+                if (sheetResult.success) {
+                  // Sheets initialized successfully
+                  this.showLoadingOverlay('Setup complete, loading app...');
+                  await this.app.normalStartup();
+                } else {
+                  // Sheet initialization failed
+                  throw new Error(sheetResult.message || 'Failed to initialize Google Sheets');
+                }
+              } catch (sheetError) {
+                console.error('Sheet initialization error:', sheetError);
+                alert('Credentials saved and authorized, but sheet setup failed: ' + 
+                      (sheetError.message || 'Unknown error'));
+                window.location.reload();
+              }
+            } else {
+              // Authorization failed with an error object
+              throw new Error(authResult.message || 'Authorization failed with no details');
+            }
+          } catch (authError) {
+            // Handle authorization errors
+            console.error('Authorization error:', authError);
+            alert('Credentials saved, but Google authorization failed: ' + 
+                  (authError.message || 'Unknown authorization error'));
+            
             // Reload to try again
             window.location.reload();
-            return;
           }
-          
-          // Continue with startup
-          await this.app.normalStartup();
         } catch (error) {
+          // Handle general errors
           console.error('Error saving credentials:', error);
-          alert('Error saving credentials: ' + error.message);
+          alert('Error saving credentials: ' + (error.message || 'Unknown error'));
         }
       });
     }
