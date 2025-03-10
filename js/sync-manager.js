@@ -37,65 +37,100 @@ class SyncManager {
   }
   
   // Load the Google API client and Identity Services library
-  async loadGoogleApi() {
-      // First ensure we have credentials
-      const hasCredentials = await this.loadCredentials();
-      if (!hasCredentials) {
-          throw new Error('Google API credentials not configured. Please add them in Settings.');
+  // Replace or update the loadGoogleApi method to ensure initializeTokenClient is called early
+async loadGoogleApi() {
+  // First ensure we have credentials
+  const hasCredentials = await this.loadCredentials();
+  if (!hasCredentials) {
+    throw new Error('Google API credentials not configured. Please add them in Settings.');
+  }
+  
+  return new Promise((resolve, reject) => {
+    // Load both Google API JS and Identity Services
+    const gapiLoaded = new Promise((gapiResolve) => {
+      // Check for gapi
+      if (window.gapi) {
+        this.gapi = window.gapi;
+        gapiResolve();
+        return;
       }
       
-      return new Promise((resolve, reject) => {
-          // Load both Google API JS and Identity Services
-          const gapiLoaded = new Promise((gapiResolve) => {
-              // If gapi is already loaded
-              if (window.gapi) {
-                  this.gapi = window.gapi;
-                  gapiResolve();
-                  return;
-              }
-              
-              // Load the Google API client script
-              const script = document.createElement('script');
-              script.src = 'https://apis.google.com/js/api.js';
-              script.async = true;
-              script.defer = true;
-              script.onload = () => {
-                  this.gapi = window.gapi;
-                  this.gapi.load('client', gapiResolve);
-              };
-              script.onerror = () => {
-                  reject(new Error('Error loading Google API script'));
-              };
-              
-              document.body.appendChild(script);
+      // Load gapi
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.async = true;
+      script.defer = true;
+      script.onload = () => {
+        this.gapi = window.gapi;
+        this.gapi.load('client', gapiResolve);
+      };
+      script.onerror = () => {
+        reject(new Error('Error loading Google API script'));
+      };
+      document.body.appendChild(script);
+    });
+    
+    const gisLoaded = new Promise((gisResolve) => {
+      // Check for google identity services
+      if (window.google && window.google.accounts) {
+        gisResolve();
+        return;
+      }
+      
+      // Load identity services
+      const script = document.createElement('script');
+      script.src = 'https://accounts.google.com/gsi/client';
+      script.async = true;
+      script.defer = true;
+      script.onload = gisResolve;
+      script.onerror = () => {
+        reject(new Error('Error loading Google Identity Services script'));
+      };
+      document.body.appendChild(script);
+    });
+    
+    // Wait for both to load
+    Promise.all([gapiLoaded, gisLoaded])
+      .then(() => {
+        // Initialize the token client immediately after loading
+        this.initializeTokenClient();
+        
+        // Now check for tokens in the URL from a redirect
+        const hash = window.location.hash;
+        if (hash && hash.includes('access_token')) {
+          console.log('Found access token in URL hash, processing...');
+          
+          // Parse hash parameters
+          const params = {};
+          hash.substring(1).split('&').forEach(pair => {
+            const [key, value] = pair.split('=');
+            params[key] = decodeURIComponent(value);
           });
           
-          const gisLoaded = new Promise((gisResolve) => {
-              // If Google Identity Services is already loaded
-              if (window.google && window.google.accounts) {
-                  gisResolve();
-                  return;
-              }
-              
-              // Load the Google Identity Services script
-              const script = document.createElement('script');
-              script.src = 'https://accounts.google.com/gsi/client';
-              script.async = true;
-              script.defer = true;
-              script.onload = gisResolve;
-              script.onerror = () => {
-                  reject(new Error('Error loading Google Identity Services script'));
-              };
-              
-              document.body.appendChild(script);
-          });
-          
-          // Wait for both libraries to load
-          Promise.all([gapiLoaded, gisLoaded])
-              .then(() => resolve())
-              .catch(error => reject(error));
-      });
-  }
+          // Create token object
+          if (params.access_token) {
+            const tokenObj = {
+              access_token: params.access_token,
+              expires_in: params.expires_in || 3600,
+              token_type: params.token_type || 'Bearer'
+            };
+            
+            console.log('Setting token from URL hash');
+            this.gapi.client.setToken(tokenObj);
+            this.isAuthorized = true;
+            
+            // Clean up URL
+            if (window.history && window.history.replaceState) {
+              window.history.replaceState({}, document.title, window.location.pathname);
+            }
+          }
+        }
+        
+        resolve();
+      })
+      .catch(error => reject(error));
+  });
+}
   
   // Initialize the Google API client
   async initializeGapiClient() {

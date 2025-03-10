@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '6'; // Can be incremented with each build
+const BUILD_NUMBER = '7'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -52,43 +52,80 @@ class TaskMasterApp {
       }
 
       async checkResumeActions() {
-        // Check if we need to resume an action after redirect
-        const resumeAction = await this.storage.get('resumeAction');
-        if (resumeAction) {
-          // Clear the resume action right away to prevent loops
-          await this.storage.remove('resumeAction');
-          
-          console.log('Resuming action after authentication:', resumeAction);
-          
-          switch (resumeAction) {
-            case 'createSpreadsheet':
-              // Continue with spreadsheet creation
-              try {
-                const sheetResult = await this.sync.initializeSheets();
-                if (sheetResult && sheetResult.success) {
-                  // Successful sheet initialization, continue with setup
-                  await this.completeSetup();
-                } else {
-                  // Handle sheet initialization failure
-                  const errorMessage = sheetResult ? sheetResult.message : 'Unknown error';
-                  this.ui.showSheetsInitError(errorMessage, () => this.firstTimeSetup());
+        try {
+          // Check if we need to resume an action after redirect
+          const resumeAction = await this.storage.get('resumeAction');
+          if (resumeAction) {
+            // Clear the resume action right away to prevent loops
+            await this.storage.remove('resumeAction');
+            
+            console.log('Resuming action after authentication:', resumeAction);
+            
+            // Make sure token is applied
+            if (this.sync.gapi && this.sync.gapi.client && this.sync.gapi.client.getToken()) {
+              console.log('Token is available for resumed action');
+            } else {
+              console.warn('No token available for resumed action!');
+            }
+            
+            switch (resumeAction) {
+              case 'createSpreadsheet':
+                // Continue with spreadsheet creation
+                try {
+                  console.log('Resuming spreadsheet creation...');
+                  const sheetResult = await this.sync.initializeSheets();
+                  console.log('Sheet initialization result:', sheetResult);
+                  
+                  if (sheetResult && sheetResult.success) {
+                    console.log('Successfully created spreadsheet after redirect');
+                    // Successful sheet initialization, continue with setup
+                    await this.completeSetup();
+                  } else {
+                    // Handle sheet initialization failure
+                    const errorMessage = sheetResult ? sheetResult.message : 'Unknown error';
+                    console.error('Sheet init failed after redirect:', errorMessage);
+                    
+                    // Make sure we have appElement defined
+                    this.appElement = this.appElement || document.getElementById('app');
+                    
+                    if (this.ui && this.ui.showSheetsInitError) {
+                      this.ui.showSheetsInitError(errorMessage, () => this.firstTimeSetup());
+                    } else {
+                      this.showErrorScreen('Google Sheets Setup Failed', errorMessage, 
+                        () => this.firstTimeSetup());
+                    }
+                  }
+                } catch (error) {
+                  console.error('Error initializing sheets after redirect:', error);
+                  
+                  // Make sure we have appElement defined
+                  this.appElement = this.appElement || document.getElementById('app');
+                  
+                  if (this.ui && this.ui.showSheetsInitError) {
+                    this.ui.showSheetsInitError(error.message, () => this.firstTimeSetup());
+                  } else {
+                    this.showErrorScreen('Google Sheets Setup Failed', error.message, 
+                      () => this.firstTimeSetup());
+                  }
                 }
-              } catch (error) {
-                console.error('Error initializing sheets after redirect:', error);
-                this.ui.showSheetsInitError(error.message, () => this.firstTimeSetup());
-              }
-              break;
-              
-            // Add more cases here for other actions that might need resuming
-              
-            default:
-              console.warn('Unknown resume action:', resumeAction);
+                break;
+                
+              default:
+                console.warn('Unknown resume action:', resumeAction);
+            }
           }
+        } catch (error) {
+          console.error('Error checking resume actions:', error);
         }
       }
     
     async initializeApp() {
         try {
+
+            // Set up a fallback for appElement right away
+            this.appElement = document.getElementById('app');
+            // Add fallbacks for missing UI methods
+            if (!this.ui) this.ui = {};
             // Set up event listeners for online/offline status
             window.addEventListener('online', () => this.handleOnlineStatus(true));
             window.addEventListener('offline', () => this.handleOnlineStatus(false));
