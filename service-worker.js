@@ -21,11 +21,11 @@ const ASSETS_TO_CACHE = [
   '${BASE_PATH}/js/notification-manager.js',
   '${BASE_PATH}/js/gamification-system.js',
   '${BASE_PATH}/js/ui-manager.js',
-  '${BASE_PATH}/views/tasks.js',
-  '${BASE_PATH}/views/daily.js',
-  '${BASE_PATH}/views/progress.js',
-  '${BASE_PATH}/views/achievements.js',
-  '${BASE_PATH}/views/settings.js'
+  '${BASE_PATH}/js/views/tasks.js',
+  '${BASE_PATH}/js/views/daily.js',
+  '${BASE_PATH}/js/views/progress.js',
+  '${BASE_PATH}/js/views/achievements.js',
+  '${BASE_PATH}/js/views/settings.js'
 ];
 
 // Install event - cache assets
