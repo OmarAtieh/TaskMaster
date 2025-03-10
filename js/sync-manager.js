@@ -203,131 +203,80 @@ async loadGoogleApi() {
   // Authorize with Google
   async authorize() {
     try {
-      // Check if we have credentials
+      console.log("Starting authorization process...");
+  
+      // Load credentials from storage
       const hasCredentials = await this.loadCredentials();
       if (!hasCredentials) {
-        this.isAuthorized = false;
-        return { 
-          success: false, 
-          reason: 'missing_credentials',
-          message: 'Google API credentials not configured.' 
-        };
+        console.error("Missing Google API credentials.");
+        return { success: false, reason: "missing_credentials", message: "Google API credentials not configured." };
       }
-      
-      // Load the required libraries
+  
+      // Load Google APIs if not already loaded
       await this.loadGoogleApi();
-      
-      // Initialize the GAPI client
-      await this.gapi.client.init({
-        apiKey: this.API_KEY,
-        discoveryDocs: this.DISCOVERY_DOCS
-      });
-      
-      // Initialize the token client if needed
-      if (!this.tokenClient && window.google && window.google.accounts) {
+      await this.initializeGapiClient();
+  
+      // Retrieve stored token if available
+      const storedToken = localStorage.getItem("oauth_token");
+      const storedExpiry = localStorage.getItem("oauth_token_expiry");
+      const now = Date.now();
+  
+      if (storedToken && storedExpiry && now < parseInt(storedExpiry, 10)) {
+        console.log("Using stored OAuth token.");
+        this.gapi.client.setToken({ access_token: storedToken });
+        this.isAuthorized = true;
+        return { success: true };
+      }
+  
+      console.log("No valid stored token found. Requesting a new one...");
+  
+      // Ensure token client is initialized
+      if (!this.tokenClient) {
         this.tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: this.CLIENT_ID,
           scope: this.SCOPES,
+          ux_mode: "redirect", // Redirect-based auth for better stability
+          redirect_uri: window.location.href.split("#")[0],
           callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
-              // Token received successfully
-              this.isAuthorized = true;
-              // Set the token for GAPI to use
+              console.log("Received new access token.");
               this.gapi.client.setToken(tokenResponse);
-              console.log('Successfully obtained access token');
+              this.isAuthorized = true;
+              localStorage.setItem("oauth_token", tokenResponse.access_token);
+              localStorage.setItem("oauth_token_expiry", Date.now() + (parseInt(tokenResponse.expires_in, 10) * 1000));
+            } else {
+              console.error("Failed to obtain access token.");
             }
           },
           error_callback: (error) => {
-            console.error('Error obtaining access token:', error);
+            console.error("OAuth Error:", error);
             this.isAuthorized = false;
-          }
+          },
         });
       }
-      
-      // Check if we're already authorized
-      try {
-        const tokenCheck = await this.gapi.client.sheets.spreadsheets.get({
-          spreadsheetId: 'dummy-id-for-test'
-        });
-        
-        // If we get here without an error, we already have a valid token
-        this.isAuthorized = true;
-        console.log('User already has a valid token');
-        
-        // Get the spreadsheet ID from storage
-        this.spreadsheetId = await this.storage.get('spreadsheet_id');
-        
-        return { success: true };
-      } catch (error) {
-        // Expected 404 error for dummy ID test - which is actually good!
-        if (error.status === 404) {
-          this.isAuthorized = true;
-          console.log('User has a valid token (404 is expected and good)');
-          
-          // Get the spreadsheet ID from storage
-          this.spreadsheetId = await this.storage.get('spreadsheet_id');
-          
-          return { success: true };
-        }
-        
-        // If error code is 401 or 403, we need a new token
-        if (error.status === 401 || error.status === 403) {
-          console.log('Need to request a new token');
-          
-          // If we don't have a token client, we can't proceed
-          if (!this.tokenClient) {
-            return {
-              success: false,
-              reason: 'no_token_client',
-              message: 'Token client not initialized properly'
-            };
+  
+      // Start authentication request
+      return new Promise((resolve) => {
+        this.tokenClient.requestAccessToken({ prompt: "consent" });
+        const checkInterval = setInterval(() => {
+          if (this.isAuthorized) {
+            clearInterval(checkInterval);
+            resolve({ success: true });
           }
-          
-          // Return a promise that resolves when we get the token
-          return new Promise((resolve) => {
-            // Request a token
-            this.tokenClient.requestAccessToken({
-              prompt: 'consent'
-            });
-            
-            // Set up a timeout in case authorization takes too long
-            const timeout = setTimeout(() => {
-              resolve({ 
-                success: false, 
-                reason: 'auth_timeout',
-                message: 'Authorization timed out' 
-              });
-            }, 60000); // 1 minute timeout
-            
-            // Set up an interval to check if we've been authorized
-            const interval = setInterval(() => {
-              if (this.isAuthorized) {
-                clearTimeout(timeout);
-                clearInterval(interval);
-                resolve({ success: true });
-              }
-            }, 500); // Check every 500ms
-          });
-        } else {
-          // Some other error
-          console.error('Error checking authorization:', error);
-          return { 
-            success: false, 
-            reason: 'auth_error',
-            message: 'Failed to check authorization: ' + (error.message || 'Unknown error') 
-          };
-        }
-      }
+        }, 500); // Check every 500ms for token success
+  
+        setTimeout(() => {
+          clearInterval(checkInterval);
+          resolve({ success: false, reason: "auth_timeout", message: "Authorization timed out." });
+        }, 60000); // Timeout after 60 seconds
+      });
     } catch (error) {
-      console.error('Google authorization failed:', error);
+      console.error("Authorization failed:", error);
       this.isAuthorized = false;
-      return { 
-        success: false, 
-        reason: 'auth_error',
-        message: 'Failed to authorize with Google: ' + (error.message || 'Unknown error') 
-      };
+      return { success: false, reason: "auth_error", message: error.message || "Unknown error." };
     }
   }
+  
   
   // Get spreadsheet ID from storage or create a new one
   async getSpreadsheetId() {
@@ -404,23 +353,15 @@ async loadGoogleApi() {
       if (!this.gapi || !this.gapi.client || !this.gapi.client.sheets) {
         throw new Error('Google Sheets API not properly initialized. Please check your API credentials.');
       }
-      
       // IMPORTANT: Verify we have a valid token
       const token = this.gapi.client.getToken();
+
+      //Ensure Token is Set Before Making API Requests
       if (!token || !token.access_token) {
-        console.log('No valid token found, requesting a new one');
-        
-        // Request authorization directly
-        const authResult = await this.authorize();
-        if (!authResult || !authResult.success) {
-          throw new Error('Failed to obtain OAuth token: ' + 
-            (authResult ? authResult.message : 'No auth result'));
-        }
-        
-        // Verify token again after authorization
-        const newToken = this.gapi.client.getToken();
-        if (!newToken || !newToken.access_token) {
-          throw new Error('Failed to obtain valid token after authorization');
+        console.error("No valid token found before making API request. Requesting new one...");
+        const authResult = await this.authorize();  // Re-attempt authorization
+        if (!authResult.success) {
+          throw new Error('Failed to obtain OAuth token: ' + authResult.message);
         }
       }
       

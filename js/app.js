@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '7'; // Can be incremented with each build
+const BUILD_NUMBER = '9'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -332,65 +332,69 @@ class TaskMasterApp {
     
       async initializeApp() {
         try {
-
             // Set up appElement right away
             this.appElement = document.getElementById('app') || document.body;
             
             // Create UI fallbacks immediately
-            if (!this.ui) this.ui = {};
+            if (!this.ui) {
+                this.ui = {}; // Ensures `this.ui` exists
+            }
+    
+            // Add error display methods if missing
             if (!this.ui.showSheetsInitError) {
-              this.ui.showSheetsInitError = (message, retryCallback) => {
-                this.showErrorScreen('Google Sheets Setup Failed', message, retryCallback);
-              };
+                this.ui.showSheetsInitError = (message, retryCallback) => {
+                    this.showErrorScreen('Google Sheets Setup Failed', message, retryCallback);
+                };
             }
             if (!this.ui.showAuthError) {
-              this.ui.showAuthError = (message, retryCallback) => {
-                this.showErrorScreen('Authentication Failed', message, retryCallback);
-              };
+                this.ui.showAuthError = (message, retryCallback) => {
+                    this.showErrorScreen('Authentication Failed', message, retryCallback);
+                };
             }
+    
+            // Ensure other UI methods exist
             this.ensureUIMethodsExist();
-            
-            // Process URL hash first to see if we're coming back from authentication
+    
+            // Process URL hash to see if we're coming back from authentication
             const hash = window.location.hash;
             if (hash && hash.includes('access_token')) {
-              console.log('Detected token in URL - coming back from auth redirect');
-              
-              // Parse token from URL
-              const params = {};
-              hash.substring(1).split('&').forEach(pair => {
-                const [key, value] = pair.split('=');
-                params[key] = decodeURIComponent(value);
-              });
-              
-              // Clean up the URL
-              if (window.history && window.history.replaceState) {
-                window.history.replaceState({}, document.title, window.location.pathname);
-              }
-              
-              // Store token information for later use
-              localStorage.setItem('oauth_token', params.access_token);
-              localStorage.setItem('oauth_token_expiry', Date.now() + (parseInt(params.expires_in || '3600') * 1000));
+                console.log('Detected token in URL - coming back from auth redirect');
+                
+                // Parse token from URL
+                const params = {};
+                hash.substring(1).split('&').forEach(pair => {
+                    const [key, value] = pair.split('=');
+                    params[key] = decodeURIComponent(value);
+                });
+    
+                // Clean up the URL
+                if (window.history && window.history.replaceState) {
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                }
+    
+                // Store token information for later use
+                localStorage.setItem('oauth_token', params.access_token);
+                localStorage.setItem('oauth_token_expiry', Date.now() + (parseInt(params.expires_in || '3600') * 1000));
             }
-            // Add fallbacks for missing UI methods
-            if (!this.ui) this.ui = {};
+    
             // Set up event listeners for online/offline status
             window.addEventListener('online', () => this.handleOnlineStatus(true));
             window.addEventListener('offline', () => this.handleOnlineStatus(false));
-            
+    
             // Apply theme immediately to prevent flash
             this.applyTheme(this.config.theme);
-            
+    
             // Show loading message
             this.showLoadingMessage('Initializing...');
-      
-            // Initialize storage - we need this first
+    
+            // Initialize storage
             this.storage = new StorageManager();
             await this.storage.initialize();
             this.showLoadingMessage('Storage initialized...');
-            
+    
             // Load or create user preferences
             this.preferences = await this.loadPreferences();
-            
+    
             // Initialize core modules (sequential for now)
             this.graphics = new UIGraphics(this.preferences.theme);
             this.sound = new SoundEffects();
@@ -401,15 +405,26 @@ class TaskMasterApp {
             this.gamification = new GamificationSystem(this);
             this.taskForm = new TaskForm(this);
             this.dailyMissions = new DailyMissionManager(this);
-            
-
+    
             this.logAppVersion();
             this.showLoadingMessage('Modules loaded...');
-            
+    
             // Initialize UI manager last (depends on other modules)
             this.ui = new UIManager(this);
-            
-            // Check if this is first run
+    
+            // Ensure UI error methods exist after UIManager is initialized
+            if (!this.ui.showSheetsInitError) {
+                this.ui.showSheetsInitError = (message, retryCallback) => {
+                    this.showErrorScreen('Google Sheets Setup Failed', message, retryCallback);
+                };
+            }
+            if (!this.ui.showAuthError) {
+                this.ui.showAuthError = (message, retryCallback) => {
+                    this.showErrorScreen('Authentication Failed', message, retryCallback);
+                };
+            }
+    
+            // Check if this is the first run
             const isFirstRun = !(await this.storage.get('app_initialized'));
             if (isFirstRun) {
                 await this.firstTimeSetup();
@@ -420,7 +435,8 @@ class TaskMasterApp {
             console.error('Application initialization failed:', error);
             this.showErrorScreen('Initialization failed', error.message);
         }
-      }
+    }
+    
     
     async loadPreferences() {
         // Get stored preferences or use defaults
