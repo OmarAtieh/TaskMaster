@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '17'; // Can be incremented with each build
+const BUILD_NUMBER = '18'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -343,7 +343,13 @@ class TaskMasterApp {
             // Retrieve stored credentials
             this.CLIENT_ID = await this.storage.get("google_client_id");
             this.API_KEY = await this.storage.get("google_api_key");
+            this.AUTO_LOGIN = await this.storage.get("auto_login") === "true"; // Check if auto-login is enabled
     
+            console.log("Retrieved Client ID:", this.CLIENT_ID);
+            console.log("Retrieved API Key:", this.API_KEY);
+            console.log("Auto-login enabled:", this.AUTO_LOGIN);
+    
+            // Ensure valid credentials are present
             if (!this.CLIENT_ID || !this.API_KEY || this.CLIENT_ID.trim() === "" || this.API_KEY.trim() === "") {
                 console.warn("Google API credentials missing. Prompting user for input.");
                 return this.ui.showCredentialEntryScreen();
@@ -351,10 +357,17 @@ class TaskMasterApp {
     
             console.log("Credentials validated. Waiting for user authentication...");
     
-            this.ui.showAuthPrompt(() => {
-                console.log("User clicked authenticate...");
+            // ✅ If auto-login is enabled, attempt authentication immediately
+            if (this.AUTO_LOGIN) {
+                console.log("Auto-login is enabled. Attempting authentication...");
                 this.sync.authorize();
-            });
+            } else {
+                console.log("Auto-login is disabled. Waiting for user authentication...");
+                this.ui.showAuthPrompt(() => {
+                    console.log("User clicked authenticate...");
+                    this.sync.authorize();
+                });
+            }
     
             this.preferences = await this.loadPreferences();
             this.graphics = new UIGraphics(this.preferences.theme);
@@ -376,9 +389,14 @@ class TaskMasterApp {
     
         } catch (error) {
             console.error("Initialization failed:", error);
-            this.ui.showAuthError("Initialization failed. Click retry to re-enter credentials.", () => this.ui.showCredentialEntryScreen());
+            this.storage.set("auto_login", "false"); // Reset auto-login on failure
+            this.ui.showAuthError(
+                "Initialization failed. Click retry to re-enter credentials.",
+                () => this.ui.showCredentialEntryScreen()
+            );
         }
     }
+    
     
     
     async loadPreferences() {

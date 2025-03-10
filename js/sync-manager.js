@@ -28,7 +28,7 @@ class SyncManager {
           // Load credentials from storage
           this.CLIENT_ID = await this.storage.get('google_client_id');
           this.API_KEY = await this.storage.get('google_api_key');
-          
+      
           return !!this.CLIENT_ID && !!this.API_KEY;
       } catch (error) {
           console.error('Error loading Google API credentials:', error);
@@ -145,6 +145,9 @@ async loadGoogleApi() {
     // Get the current URL (for redirect)
     const redirectUri = window.location.href.split('#')[0]; // Remove any hash fragment
     
+    console.log("Client ID from storage:", this.CLIENT_ID);
+    console.log("API Key from storage:", this.API_KEY);
+
     this.tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: this.CLIENT_ID,
       scope: this.SCOPES,
@@ -235,12 +238,12 @@ async loadGoogleApi() {
 
         return { success: false, reason: "auth_redirect", message: "Redirecting to Google for authentication." };
 
-    } catch (error) {
-        console.error("Authorization failed:", error);
-        this.app.ui.showAuthError(
-            `Authentication failed: ${error.message}`,
-            () => this.app.showCredentialEntryScreen() // Return user to credentials input
-        );
+    }  catch (error) {
+          console.error("Authentication failed:", error);
+          this.app.storage.set("auto_login", "false"); // Reset auto-login on error
+          this.app.ui.showAuthError("Authentication failed. Please try again.", () => {
+          this.app.ui.showAuthPrompt(() => this.authorize());
+      });
 
         return { success: false, reason: "auth_error", message: error.message || "Unknown error" };
     }

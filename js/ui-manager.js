@@ -1069,24 +1069,35 @@ class UIManager {
   }
   
   showAuthPrompt(authCallback) {
-          console.log("Showing authentication prompt...");
+      console.log("Displaying authentication prompt...");
 
-          const appElement = document.getElementById("app");
-          appElement.innerHTML = `
-              <div class="auth-prompt">
-                  <h2>Google Authentication Required</h2>
-                  <p>Please sign in to continue.</p>
-                  <button id="auth-btn" class="primary-button">Sign in with Google</button>
-              </div>
-          `;
+      const appElement = document.getElementById("app");
 
-          document.getElementById("auth-btn").addEventListener("click", () => {
-              console.log("User clicked authenticate...");
-              if (typeof authCallback === "function") {
-                  authCallback();
-              }
-          });
-      }
+      appElement.innerHTML = `
+          <div class="auth-screen">
+              <h2>Connect to Google</h2>
+              <p>Please authenticate to use TaskMaster.</p>
+
+              <button id="login-button" class="primary-button">Login with Google</button>
+              
+              <label class="checkbox-container">
+                  <input type="checkbox" id="auto-login-checkbox">
+                  Do not require user interaction to log in the future
+              </label>
+          </div>
+      `;
+
+      document.getElementById("login-button").addEventListener("click", () => {
+          console.log("User clicked login...");
+
+          // ✅ Save preference for auto-login
+          const autoLoginEnabled = document.getElementById("auto-login-checkbox").checked;
+          this.app.storage.set("auto_login", autoLoginEnabled.toString());
+
+          authCallback(); // Start authentication
+      });
+  }
+
 
       showAuthError(message, retryCallback) {
           console.log("Showing authentication error:", message);
