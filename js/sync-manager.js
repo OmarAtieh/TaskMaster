@@ -205,20 +205,19 @@ async loadGoogleApi() {
     try {
         console.log("Starting authorization process...");
 
-        // Ensure credentials are loaded before proceeding
+        // Ensure API credentials are loaded
         this.CLIENT_ID = this.CLIENT_ID || await this.storage.get("google_client_id");
         this.API_KEY = this.API_KEY || await this.storage.get("google_api_key");
 
         if (!this.CLIENT_ID || !this.API_KEY) {
-            console.error("Google API credentials missing. Check Google Cloud Console.");
+            console.error("Google API credentials missing.");
             return { success: false, reason: "missing_credentials", message: "Google API credentials are required." };
         }
 
-        // Ensure Google API and Identity Services are loaded
         await this.loadGoogleApi();
         await this.initializeGapiClient();
 
-        // Check if a token is already stored
+        // Check for existing valid token
         const storedToken = localStorage.getItem("oauth_token");
         const storedExpiry = localStorage.getItem("oauth_token_expiry");
         const now = Date.now();
@@ -230,46 +229,18 @@ async loadGoogleApi() {
             return { success: true };
         }
 
-        console.log("No valid stored token found. Checking for redirect tokens...");
+        console.log("No valid stored token found. Redirecting to Google OAuth...");
 
-        // Handle tokens from redirect-based authentication
-        const hash = window.location.hash;
-        if (hash.includes("access_token")) {
-            console.log("Detected OAuth token in URL, processing...");
-            const params = new URLSearchParams(hash.substring(1));
-            const tokenObj = {
-                access_token: params.get("access_token"),
-                expires_in: params.get("expires_in") || 3600,
-                token_type: params.get("token_type") || "Bearer"
-            };
+        // Force full-page redirect to Google for authentication
+        const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?
+            client_id=${encodeURIComponent(this.CLIENT_ID)}
+            &redirect_uri=${encodeURIComponent(window.location.origin)}
+            &response_type=token
+            &scope=${encodeURIComponent("https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file")}
+            &include_granted_scopes=true
+            &prompt=consent`;
 
-            this.gapi.client.setToken(tokenObj);
-            localStorage.setItem("oauth_token", tokenObj.access_token);
-            localStorage.setItem("oauth_token_expiry", Date.now() + tokenObj.expires_in * 1000);
-            this.isAuthorized = true;
-
-            // Clean up the URL to remove access tokens from the hash
-            window.history.replaceState({}, document.title, window.location.pathname);
-
-            return { success: true };
-        }
-
-        console.log("Requesting new OAuth token...");
-
-        // Ensure token client is initialized before making a request
-        if (!this.tokenClient) {
-            this.tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: this.CLIENT_ID,
-                scope: this.SCOPES,
-                ux_mode: "redirect",  // Changed from "popup" to "redirect"
-                redirect_uri: window.location.href.split("#")[0]
-            });
-        }
-
-        // Trigger OAuth login via redirect
-        this.tokenClient.requestAccessToken({ prompt: "consent" });
-
-        // Authorization process will complete after redirect
+        window.location.href = authUrl;
         return { success: false, reason: "auth_redirect", message: "Redirecting to Google for authentication." };
 
     } catch (error) {
@@ -277,8 +248,6 @@ async loadGoogleApi() {
         return { success: false, reason: "auth_error", message: error.message || "Unknown error" };
     }
 }
-
-
 
   
   // Get spreadsheet ID from storage or create a new one

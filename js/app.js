@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '13'; // Can be incremented with each build
+const BUILD_NUMBER = '14'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -334,78 +334,40 @@ class TaskMasterApp {
         try {
             console.log("Initializing application...");
     
-            // Set up appElement right away
-            this.appElement = document.getElementById('app') || document.body;
-    
-            // Initialize storage FIRST to avoid `get` on undefined
             this.storage = new StorageManager();
             await this.storage.initialize();
     
-            // Retrieve API credentials from storage
-            this.CLIENT_ID = await this.storage.get("google_client_id");
-            this.API_KEY = await this.storage.get("google_api_key");
-
-            if (!this.CLIENT_ID || !this.API_KEY) {
-                console.error("Google API credentials missing. Check Google Cloud Console.");
-                return { success: false, message: "Missing Google API credentials." };
-            }
-    
-            // Create UI fallbacks immediately
-            if (!this.ui) {
-                this.ui = {}; // Ensures `this.ui` exists
-            }
-    
-            // Add error display methods if missing
-            if (!this.ui.showSheetsInitError) {
-                this.ui.showSheetsInitError = (message, retryCallback) => {
-                    this.showErrorScreen('Google Sheets Setup Failed', message, retryCallback);
-                };
-            }
-            if (!this.ui.showAuthError) {
-                this.ui.showAuthError = (message, retryCallback) => {
-                    this.showErrorScreen('Authentication Failed', message, retryCallback);
-                };
-            }
-    
-            // Ensure other UI methods exist
-            this.ensureUIMethodsExist();
-    
-            // Process URL hash to see if we're coming back from authentication
+            // Check if OAuth token is in the URL after redirect
             const hash = window.location.hash;
-            if (hash && hash.includes('access_token')) {
-                console.log('Detected token in URL - coming back from auth redirect');
-                
-                // Parse token from URL
+            if (hash.includes("access_token")) {
+                console.log("Detected OAuth token in URL...");
                 const params = new URLSearchParams(hash.substring(1));
                 const accessToken = params.get("access_token");
                 const expiresIn = parseInt(params.get("expires_in") || "3600") * 1000;
     
                 if (accessToken) {
-                    // Store token information for later use
                     localStorage.setItem("oauth_token", accessToken);
                     localStorage.setItem("oauth_token_expiry", Date.now() + expiresIn);
     
-                    // Clean up the URL
-                    if (window.history.replaceState) {
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    }
+                    console.log("OAuth token stored successfully.");
+    
+                    // Remove token from URL to clean up
+                    window.history.replaceState({}, document.title, window.location.pathname);
                 }
             }
     
-            // Set up event listeners for online/offline status
-            window.addEventListener("online", () => this.handleOnlineStatus(true));
-            window.addEventListener("offline", () => this.handleOnlineStatus(false));
+            // Continue normal app initialization...
+            this.CLIENT_ID = await this.storage.get("google_client_id");
+            this.API_KEY = await this.storage.get("google_api_key");
     
-            // Apply theme immediately to prevent flash
-            this.applyTheme(this.config.theme);
+            if (!this.CLIENT_ID || !this.API_KEY) {
+                console.warn("Google API credentials missing. They will be requested during setup.");
+            }
     
-            // Show loading message
             this.showLoadingMessage("Initializing...");
     
-            // Load or create user preferences
             this.preferences = await this.loadPreferences();
     
-            // Initialize core modules (sequential for now)
             this.graphics = new UIGraphics(this.preferences.theme);
             this.sound = new SoundEffects();
             this.tasks = new TaskManager(this);
@@ -416,37 +378,19 @@ class TaskMasterApp {
             this.taskForm = new TaskForm(this);
             this.dailyMissions = new DailyMissionManager(this);
     
-            this.logAppVersion();
-            this.showLoadingMessage("Modules loaded...");
-    
-            // Initialize UI manager last (depends on other modules)
             this.ui = new UIManager(this);
     
-            // Ensure UI error methods exist after UIManager is initialized
-            if (!this.ui.showSheetsInitError) {
-                this.ui.showSheetsInitError = (message, retryCallback) => {
-                    this.showErrorScreen('Google Sheets Setup Failed', message, retryCallback);
-                };
-            }
-            if (!this.ui.showAuthError) {
-                this.ui.showAuthError = (message, retryCallback) => {
-                    this.showErrorScreen('Authentication Failed', message, retryCallback);
-                };
-            }
-    
-            // Check if this is the first run
             const isFirstRun = !(await this.storage.get("app_initialized"));
             if (isFirstRun) {
                 await this.firstTimeSetup();
             } else {
                 await this.normalStartup();
             }
-        } catch (error) {
-            console.error("Application initialization failed:", error);
-            this.showErrorScreen("Initialization failed", error.message);
-        }
-    }
     
+        } catch (error) {
+            console.error("Initialization failed:", error);
+        }
+    }    
     
     async loadPreferences() {
         // Get stored preferences or use defaults
