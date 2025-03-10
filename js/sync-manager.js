@@ -203,37 +203,23 @@ async loadGoogleApi() {
   // Authorize with Google
   async authorize() {
     try {
-        console.log("Starting authorization process...");
+        console.log("User requested authentication...");
 
-        // Ensure API credentials are loaded
+        // Ensure credentials are retrieved and valid
         this.CLIENT_ID = this.CLIENT_ID || await this.storage.get("google_client_id");
         this.API_KEY = this.API_KEY || await this.storage.get("google_api_key");
 
-        if (!this.CLIENT_ID || !this.API_KEY) {
-            console.error("Google API credentials missing.");
+        if (!this.CLIENT_ID || this.CLIENT_ID.trim() === "" || !this.API_KEY || this.API_KEY.trim() === "") {
+            console.error("Google Client ID or API Key is missing. Prompting user for input.");
+            this.app.showCredentialEntryScreen();
             return { success: false, reason: "missing_credentials", message: "Google API credentials are required." };
         }
 
         await this.loadGoogleApi();
         await this.initializeGapiClient();
 
-        console.log("Checking stored OAuth token...");
+        console.log("Requesting OAuth authorization...");
 
-        // Check for existing valid token
-        const storedToken = localStorage.getItem("oauth_token");
-        const storedExpiry = localStorage.getItem("oauth_token_expiry");
-        const now = Date.now();
-
-        if (storedToken && storedExpiry && now < parseInt(storedExpiry, 10)) {
-            console.log("Using stored OAuth token.");
-            this.gapi.client.setToken({ access_token: storedToken });
-            this.isAuthorized = true;
-            return { success: true };
-        }
-
-        console.log("No valid stored token found. Redirecting to Google OAuth...");
-
-        // Force full-page redirect to Google for authentication
         const authUrl = `https://accounts.google.com/o/oauth2/v2/auth?
             client_id=${encodeURIComponent(this.CLIENT_ID)}
             &redirect_uri=${encodeURIComponent(window.location.origin)}
@@ -242,18 +228,18 @@ async loadGoogleApi() {
             &include_granted_scopes=true
             &prompt=consent`;
 
-        console.log("Redirecting to OAuth:", authUrl);
+        console.log("Redirecting user to OAuth:", authUrl);
 
+        // Full-page redirect instead of pop-up
         window.location.href = authUrl;
+
         return { success: false, reason: "auth_redirect", message: "Redirecting to Google for authentication." };
 
     } catch (error) {
         console.error("Authorization failed:", error);
-
-        // Show error with retry option
         this.app.ui.showAuthError(
             `Authentication failed: ${error.message}`,
-            () => this.clearOAuthCredentialsAndRetry()
+            () => this.app.showCredentialEntryScreen() // Return user to credentials input
         );
 
         return { success: false, reason: "auth_error", message: error.message || "Unknown error" };

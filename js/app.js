@@ -337,34 +337,21 @@ class TaskMasterApp {
             this.storage = new StorageManager();
             await this.storage.initialize();
     
-            // Retrieve and validate client_id
+            // Retrieve client_id and api_key, ensuring they are not empty
             this.CLIENT_ID = await this.storage.get("google_client_id");
             this.API_KEY = await this.storage.get("google_api_key");
     
             if (!this.CLIENT_ID || !this.API_KEY) {
-                console.warn("Google API credentials missing. Redirecting to credential entry.");
-                this.showCredentialEntryScreen();
+                console.warn("Google API credentials missing. Prompting user for input.");
+                this.showCredentialEntryScreen(); // Ask user for credentials
                 return;
             }
     
-            // Check if OAuth token is in the URL after redirect
-            const hash = window.location.hash;
-            if (hash.includes("access_token")) {
-                console.log("Detected OAuth token in URL...");
-                const params = new URLSearchParams(hash.substring(1));
-                const accessToken = params.get("access_token");
-                const expiresIn = parseInt(params.get("expires_in") || "3600") * 1000;
-    
-                if (accessToken) {
-                    localStorage.setItem("oauth_token", accessToken);
-                    localStorage.setItem("oauth_token_expiry", Date.now() + expiresIn);
-    
-                    console.log("OAuth token stored successfully.");
-    
-                    // Remove token from URL to clean up
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }
-            }
+            // Display authentication prompt instead of auto-starting OAuth
+            this.ui.showAuthPrompt(() => {
+                console.log("User initiated authentication...");
+                this.sync.authorize();
+            });
     
             this.preferences = await this.loadPreferences();
     
@@ -391,7 +378,8 @@ class TaskMasterApp {
             console.error("Initialization failed:", error);
             this.ui.showAuthError("Initialization failed. Click retry to re-enter credentials.", () => this.showCredentialEntryScreen());
         }
-    }    
+    }
+    
     
     async loadPreferences() {
         // Get stored preferences or use defaults

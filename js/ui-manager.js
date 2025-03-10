@@ -153,216 +153,61 @@ class UIManager {
     // Step 2: Check for API credentials and collect if needed
     async checkAndCollectCredentials() {
       // Check if credentials exist
-      const clientId = await this.app.storage.get('google_client_id');
-      const apiKey = await this.app.storage.get('google_api_key');
-      
-      if (clientId && apiKey) {
-        // Credentials exist, update the sync manager
-        this.app.sync.CLIENT_ID = clientId;
-        this.app.sync.API_KEY = apiKey;
-        
-        // Update step indicators and move to next step
-        this.updateStepIndicators(2, true); // Mark as completed
-        return true;
+      let clientId = await this.app.storage.get('google_client_id');
+      let apiKey = await this.app.storage.get('google_api_key');
+  
+      // Ensure credentials are not just empty strings
+      if (clientId && apiKey && clientId.trim() !== "" && apiKey.trim() !== "") {
+          this.app.sync.CLIENT_ID = clientId;
+          this.app.sync.API_KEY = apiKey;
+          
+          // Update step indicators and move to the next step
+          this.updateStepIndicators(2, true);
+          return true;
       }
-      
-      // No credentials, show form to collect them
-      const stepContent = document.getElementById('onboarding-step-content');
-      stepContent.innerHTML = `
-        <div class="onboarding-step">
-          <h2>Set up Google API</h2>
-          <p>TaskMaster uses Google Sheets to securely store and sync your tasks across devices.</p>
-          <p>You'll need to provide your own Google API credentials:</p>
-          
-          <div class="form-group">
-            <label for="google-client-id">Client ID:</label>
-            <input type="text" id="google-client-id" class="form-control" placeholder="Your Google OAuth 2.0 Client ID">
-          </div>
-          
-          <div class="form-group">
-            <label for="google-api-key">API Key:</label>
-            <input type="text" id="google-api-key" class="form-control" placeholder="Your Google API Key">
-          </div>
-          
-          <div class="help-text">
-            <strong>How to get credentials:</strong>
-            <ol>
-              <li>Go to <a href="https://console.cloud.google.com" target="_blank">Google Cloud Console</a></li>
-              <li>Create a project</li>
-              <li>Enable Google Sheets API and Google Drive API</li>
-              <li>Create OAuth 2.0 credentials and an API Key</li>
-              <li>Add your domain to authorized JavaScript origins</li>
-            </ol>
-          </div>
-          
-          <div class="onboarding-actions">
-            <button id="prev-button" class="secondary-button">Back</button>
-            <button id="save-credentials-button" class="primary-button">Continue</button>
-          </div>
-        </div>
-      `;
-      
-      // Update the step indicators
-      this.updateStepIndicators(2);
-      
-      // Return a promise that resolves when the user provides credentials
-      return new Promise(resolve => {
-        document.getElementById('prev-button').addEventListener('click', () => {
-          this.showOnboardingStep1().then(() => resolve(false));
-        });
-        
-        document.getElementById('save-credentials-button').addEventListener('click', async () => {
-          const newClientId = document.getElementById('google-client-id').value.trim();
-          const newApiKey = document.getElementById('google-api-key').value.trim();
-          
-          if (!newClientId || !newApiKey) {
-            alert('Please enter both Google API credentials to continue.');
-            return;
-          }
-          
-          try {
-            // Save credentials
-            await this.app.storage.set('google_client_id', newClientId);
-            await this.app.storage.set('google_api_key', newApiKey);
-            
-            // Update sync manager
-            this.app.sync.CLIENT_ID = newClientId;
-            this.app.sync.API_KEY = newApiKey;
-            
-            // Move to next step
-            resolve(true);
-          } catch (error) {
-            console.error('Error saving credentials:', error);
-            alert('Error saving credentials: ' + error.message);
-          }
-        });
-      });
-    }
+  
+      // No valid credentials, prompt user to enter them
+      this.showCredentialsForm();
+      return false;
+  }
     
     // Step 3: Check and perform Google authentication
     async checkAndPerformAuthentication() {
-      // Show authentication step
+      // Ensure authentication only starts when the user clicks the button
       const stepContent = document.getElementById('onboarding-step-content');
-      if (!stepContent) {
-          console.error('Onboarding step content element not found');
-          return false;
-      }
-      
       stepContent.innerHTML = `
           <div class="onboarding-step">
               <h2>Connect to Google</h2>
-              <p>Now let's connect to your Google account to set up the spreadsheet.</p>
-              <p>Your data remains private in your own Google account.</p>
-              
-              <div class="loading-status" id="auth-status">
-                  <div class="spinner"></div>
-                  <p>Checking authentication status...</p>
-              </div>
-              
-              <div class="onboarding-actions" id="auth-actions" style="display: none;">
+              <p>Click below to authorize TaskMaster to access Google Sheets.</p>
+              <div class="onboarding-actions">
                   <button id="prev-button" class="secondary-button">Back</button>
                   <button id="auth-button" class="primary-button">Connect with Google</button>
               </div>
           </div>
       `;
-      
-      this.updateStepIndicators(3);
-      
-      try {
-          const authResult = await this.app.sync.authorize();
-          const statusDiv = document.getElementById('auth-status');
-          const actionsDiv = document.getElementById('auth-actions');
   
-          if (!statusDiv || !actionsDiv) {
-              console.error('Authentication UI elements not found');
-              return false;
-          }
+      document.getElementById('prev-button').addEventListener('click', () => {
+          this.checkAndCollectCredentials();
+      });
   
-          if (authResult.success) {
-              statusDiv.innerHTML = `
-                  <div class="success-icon">&#10003;</div>
-                  <p>Successfully connected to Google!</p>
-              `;
-              
-              await new Promise(resolve => setTimeout(resolve, 1500));
-              return true;
-          } else {
-              statusDiv.innerHTML = `
-                  <div class="info-icon">&#9432;</div>
-                  <p>Google authentication required.</p>
-              `;
-              actionsDiv.style.display = 'flex';
-              
-              return new Promise(resolve => {
-                  document.getElementById('prev-button')?.addEventListener('click', () => {
-                      this.checkAndCollectCredentials().then(() => resolve(false));
-                  });
-                  
-                  document.getElementById('auth-button')?.addEventListener('click', async () => {
-                      try {
-                          statusDiv.innerHTML = `
-                              <div class="spinner"></div>
-                              <p>Connecting to Google...</p>
-                          `;
-                          actionsDiv.style.display = 'none';
-                          
-                          const newAuthResult = await this.app.sync.authorize();
-                          
-                          if (newAuthResult.success) {
-                              statusDiv.innerHTML = `
-                                  <div class="success-icon">&#10003;</div>
-                                  <p>Successfully connected to Google!</p>
-                              `;
-                              
-                              await new Promise(resolve => setTimeout(resolve, 1500));
-                              resolve(true);
-                          } else {
-                              throw new Error(newAuthResult.message);
-                          }
-                      } catch (error) {
-                          console.error('Authentication failed:', error);
-                          statusDiv.innerHTML = `
-                              <div class="error-icon">&#10060;</div>
-                              <p>Authentication failed: ${error.message}</p>
-                          `;
-                          actionsDiv.style.display = 'flex';
-                      }
-                  });
-              });
-          }
-      } catch (error) {
-          console.error('Error checking auth status:', error);
-          
-          const statusDiv = document.getElementById('auth-status');
-          if (statusDiv) {
-              statusDiv.innerHTML = `
-                  <div class="error-icon">&#10060;</div>
-                  <p>Error checking authentication: ${error.message}</p>
-              `;
-          }
-          
-          const actionsDiv = document.getElementById('auth-actions');
-          if (actionsDiv) {
-              actionsDiv.style.display = 'flex';
-          }
-          
-          return new Promise(resolve => {
-              document.getElementById('prev-button')?.addEventListener('click', () => {
-                  this.checkAndCollectCredentials().then(() => resolve(false));
-              });
-              
-              document.getElementById('auth-button')?.addEventListener('click', async () => {
-                console.log("User clicked Authenticate");
-                const authResult = await this.app.sync.authorize();
-                if (authResult.success) {
-                    console.log("Authentication successful!");
-                } else {
-                    console.error("Authentication failed:", authResult.message);
-                }
-            });
+      return new Promise(resolve => {
+          document.getElementById('auth-button').addEventListener('click', async () => {
+              try {
+                  const authResult = await this.app.sync.authorize();
+                  if (authResult.success) {
+                      resolve(true);
+                  } else {
+                      throw new Error(authResult.message);
+                  }
+              } catch (error) {
+                  console.error('Authentication failed:', error);
+                  this.showCredentialEntryScreen(error.message);
+                  resolve(false);
+              }
           });
-      }
+      });
   }
+  
   
     
     // Step 4: Check and initialize Google Sheets
@@ -1196,21 +1041,23 @@ class UIManager {
       });
     }
 
-      showCredentialEntryScreen() {
-        const appElement = document.getElementById('app');
-        appElement.innerHTML = `
-            <div class="auth-error-screen">
-                <h2>Google Authentication Required</h2>
-                <p>Authentication failed or was cancelled. You need to enter credentials again.</p>
-                <button id="retry-auth" class="primary-button">Re-enter Credentials</button>
-            </div>
-        `;
-    
-        document.getElementById("retry-auth").addEventListener("click", async () => {
-            console.log("User opted to re-enter credentials.");
-            this.app.storage.clearOAuthCredentialsAndRetry();
-        });
-    }
+    showCredentialEntryScreen(errorMessage = "Authentication failed. Please re-enter your credentials.") {
+      const appElement = document.getElementById('app');
+      appElement.innerHTML = `
+          <div class="auth-error-screen">
+              <h2>Google Authentication Required</h2>
+              <p>${errorMessage}</p>
+              <button id="retry-auth" class="primary-button">Re-enter Credentials</button>
+          </div>
+      `;
+  
+      document.getElementById("retry-auth").addEventListener("click", async () => {
+          console.log("User opted to re-enter credentials.");
+          await this.app.storage.remove("google_client_id");
+          await this.app.storage.remove("google_api_key");
+          this.showCredentialsForm();
+      });
+  }
   
   }
   
