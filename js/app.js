@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '10'; // Can be incremented with each build
+const BUILD_NUMBER = '11'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -337,7 +337,11 @@ class TaskMasterApp {
             // Set up appElement right away
             this.appElement = document.getElementById('app') || document.body;
     
-            // Ensure API credentials are retrieved from storage on startup
+            // Initialize storage FIRST to avoid `get` on undefined
+            this.storage = new StorageManager();
+            await this.storage.initialize();
+    
+            // Retrieve API credentials from storage
             this.CLIENT_ID = await this.storage.get("google_client_id");
             this.API_KEY = await this.storage.get("google_api_key");
     
@@ -369,7 +373,7 @@ class TaskMasterApp {
             const hash = window.location.hash;
             if (hash && hash.includes('access_token')) {
                 console.log('Detected token in URL - coming back from auth redirect');
-                
+    
                 // Parse token from URL
                 const params = new URLSearchParams(hash.substring(1));
                 const accessToken = params.get("access_token");
@@ -396,11 +400,6 @@ class TaskMasterApp {
     
             // Show loading message
             this.showLoadingMessage("Initializing...");
-    
-            // Initialize storage
-            this.storage = new StorageManager();
-            await this.storage.initialize();
-            this.showLoadingMessage("Storage initialized...");
     
             // Load or create user preferences
             this.preferences = await this.loadPreferences();
@@ -445,7 +444,7 @@ class TaskMasterApp {
             console.error("Application initialization failed:", error);
             this.showErrorScreen("Initialization failed", error.message);
         }
-    }
+    }    
     
     async loadPreferences() {
         // Get stored preferences or use defaults
