@@ -20,10 +20,19 @@ class UIManager {
     // Show the initial onboarding UI
     async showOnboarding() {
       // Show initial onboarding UI with first step only
+      const appElement = document.getElementById("app");
+      
+      if (!this.app.graphics) {
+          console.warn("Graphics module not initialized, using default logo.");
+          this.app.graphics = new UIGraphics(); // Ensure the graphics object exists
+      }
+
+    const appLogoSVG = this.app.graphics.getAppLogo(80); // Use existing function
+
       this.appElement.innerHTML = `
         <div class="onboarding-container">
           <div class="onboarding-header">
-            <div class="app-logo">${this.graphics.getAppLogo(80)}</div>
+            <div class="app-logo">${appLogoSVG}</div>
             <h1>Welcome to TaskMaster</h1>
           </div>
           
@@ -1059,6 +1068,45 @@ class UIManager {
       });
   }
   
+  showAuthPrompt(authCallback) {
+          console.log("Showing authentication prompt...");
+
+          const appElement = document.getElementById("app");
+          appElement.innerHTML = `
+              <div class="auth-prompt">
+                  <h2>Google Authentication Required</h2>
+                  <p>Please sign in to continue.</p>
+                  <button id="auth-btn" class="primary-button">Sign in with Google</button>
+              </div>
+          `;
+
+          document.getElementById("auth-btn").addEventListener("click", () => {
+              console.log("User clicked authenticate...");
+              if (typeof authCallback === "function") {
+                  authCallback();
+              }
+          });
+      }
+
+      showAuthError(message, retryCallback) {
+          console.log("Showing authentication error:", message);
+
+          const appElement = document.getElementById("app");
+          appElement.innerHTML = `
+              <div class="auth-error">
+                  <h2>Authentication Failed</h2>
+                  <p>${message}</p>
+                  <button id="retry-btn" class="primary-button">Retry</button>
+              </div>
+          `;
+
+          document.getElementById("retry-btn").addEventListener("click", () => {
+              if (typeof retryCallback === "function") {
+                  retryCallback();
+              }
+          });
+      }
+
   }
   
   // Export the class if in Node.js environment

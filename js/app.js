@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '16'; // Can be incremented with each build
+const BUILD_NUMBER = '17'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -351,15 +351,10 @@ class TaskMasterApp {
     
             console.log("Credentials validated. Waiting for user authentication...");
     
-            // Wait for user to manually start authentication
-            if (typeof this.ui.showAuthPrompt === "function") {
-                this.ui.showAuthPrompt(() => {
-                    console.log("User clicked authenticate...");
-                    this.sync.authorize();
-                });
-            } else {
-                console.error("showAuthPrompt function is missing in UIManager.");
-            }
+            this.ui.showAuthPrompt(() => {
+                console.log("User clicked authenticate...");
+                this.sync.authorize();
+            });
     
             this.preferences = await this.loadPreferences();
             this.graphics = new UIGraphics(this.preferences.theme);
@@ -381,11 +376,7 @@ class TaskMasterApp {
     
         } catch (error) {
             console.error("Initialization failed:", error);
-            if (typeof this.ui.showAuthError === "function") {
-                this.ui.showAuthError("Initialization failed. Click retry to re-enter credentials.", () => this.ui.showCredentialEntryScreen());
-            } else {
-                console.error("showAuthError function is missing in UIManager.");
-            }
+            this.ui.showAuthError("Initialization failed. Click retry to re-enter credentials.", () => this.ui.showCredentialEntryScreen());
         }
     }
     
