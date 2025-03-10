@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
-const APP_VERSION = '0.0.4'; // Increment this with each change
+const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '4'; // Can be incremented with each build
+const BUILD_NUMBER = '5'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -48,6 +48,42 @@ class TaskMasterApp {
           versionDisplay.title = `Built on ${BUILD_DATE}`;
         } else {
           console.warn('Version display element not found in the DOM');
+        }
+      }
+
+      async checkResumeActions() {
+        // Check if we need to resume an action after redirect
+        const resumeAction = await this.storage.get('resumeAction');
+        if (resumeAction) {
+          // Clear the resume action right away to prevent loops
+          await this.storage.remove('resumeAction');
+          
+          console.log('Resuming action after authentication:', resumeAction);
+          
+          switch (resumeAction) {
+            case 'createSpreadsheet':
+              // Continue with spreadsheet creation
+              try {
+                const sheetResult = await this.sync.initializeSheets();
+                if (sheetResult && sheetResult.success) {
+                  // Successful sheet initialization, continue with setup
+                  await this.completeSetup();
+                } else {
+                  // Handle sheet initialization failure
+                  const errorMessage = sheetResult ? sheetResult.message : 'Unknown error';
+                  this.ui.showSheetsInitError(errorMessage, () => this.firstTimeSetup());
+                }
+              } catch (error) {
+                console.error('Error initializing sheets after redirect:', error);
+                this.ui.showSheetsInitError(error.message, () => this.firstTimeSetup());
+              }
+              break;
+              
+            // Add more cases here for other actions that might need resuming
+              
+            default:
+              console.warn('Unknown resume action:', resumeAction);
+          }
         }
       }
     
@@ -195,6 +231,8 @@ class TaskMasterApp {
     
     async normalStartup() {
         try {
+            // Check for resume actions first
+            await this.checkResumeActions();
             this.showLoadingMessage('Checking authorization...');
     
             // Try to authorize

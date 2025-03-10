@@ -107,18 +107,23 @@ class SyncManager {
   
   // Initialize the Token Client for OAuth
   initializeTokenClient() {
+    // Get the current URL (for redirect)
+    const redirectUri = window.location.href.split('#')[0]; // Remove any hash fragment
+    
     this.tokenClient = google.accounts.oauth2.initTokenClient({
       client_id: this.CLIENT_ID,
       scope: this.SCOPES,
-      prompt: 'consent',  // Force consent screen to ensure we get refresh tokens
+      // Use redirect flow instead of popup
+      ux_mode: 'redirect',
+      redirect_uri: redirectUri,
+      // This callback won't be called with redirect flow
+      // but we include it for popup fallback
       callback: (tokenResponse) => {
         if (tokenResponse && tokenResponse.access_token) {
           // Token received successfully
           this.isAuthorized = true;
-          
-          // Important: Set the access token for GAPI to use in requests
+          // Set the token for GAPI to use
           this.gapi.client.setToken(tokenResponse);
-          
           console.log('Successfully obtained access token');
         }
       },
@@ -127,6 +132,37 @@ class SyncManager {
         this.isAuthorized = false;
       }
     });
+    
+    // Check if we have returned from a redirect with hash parameters
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      // Parse hash parameters into an object
+      const params = {};
+      hash.substring(1).split('&').forEach(pair => {
+        const [key, value] = pair.split('=');
+        params[key] = decodeURIComponent(value);
+      });
+      
+      // If we have an access token in the URL
+      if (params.access_token) {
+        // Create a token object
+        const tokenObj = {
+          access_token: params.access_token,
+          expires_in: params.expires_in || 3600,
+          token_type: params.token_type || 'Bearer'
+        };
+        
+        // Set the token for GAPI
+        this.gapi.client.setToken(tokenObj);
+        this.isAuthorized = true;
+        console.log('Found token in URL, authorization successful');
+        
+        // Clean up the URL by removing the hash
+        if (window.history && window.history.replaceState) {
+          window.history.replaceState({}, document.title, window.location.pathname);
+        }
+      }
+    }
   }
   
   // Authorize with Google
@@ -344,25 +380,16 @@ class SyncManager {
           throw new Error('Token client not initialized and no valid token available');
         }
         
-        // Request a token and wait for it
-        await new Promise((resolve, reject) => {
-          const timeout = setTimeout(() => {
-            reject(new Error('Token request timed out'));
-          }, 60000);
-          
-          this.tokenClient.callback = (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              this.gapi.client.setToken(tokenResponse);
-              clearTimeout(timeout);
-              resolve();
-            } else {
-              clearTimeout(timeout);
-              reject(new Error('Failed to get access token'));
-            }
-          };
-          
-          this.tokenClient.requestAccessToken({prompt: 'consent'});
-        });
+        // For redirect flow, we can't use promises/await as the page will reload
+        // So we'll store state and redirect
+        await this.storage.set('resumeAction', 'createSpreadsheet');
+        
+        // Request token via redirect
+        this.tokenClient.requestAccessToken();
+        
+        // This code won't execute immediately as the page will redirect
+        // But we need to return something to satisfy TypeScript/linters
+        throw new Error('Redirecting for authentication');
       }
       
       console.log('Creating spreadsheet with token:', !!this.gapi.client.getToken());
