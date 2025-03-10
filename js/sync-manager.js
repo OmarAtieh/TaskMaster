@@ -149,7 +149,7 @@ async loadGoogleApi() {
       client_id: this.CLIENT_ID,
       scope: this.SCOPES,
       // Use redirect flow instead of popup
-      ux_mode: 'redirect',
+      ux_mode: "redirect",  
       redirect_uri: redirectUri,
       // This callback won't be called with redirect flow
       // but we include it for popup fallback
@@ -205,18 +205,21 @@ async loadGoogleApi() {
     try {
       console.log("Starting authorization process...");
   
-      // Load credentials from storage
-      const hasCredentials = await this.loadCredentials();
-      if (!hasCredentials) {
-        console.error("Missing Google API credentials.");
-        return { success: false, reason: "missing_credentials", message: "Google API credentials not configured." };
+      // Step 1: Ensure credentials are loaded before proceeding
+      if (!this.CLIENT_ID || !this.API_KEY) {
+        console.error("Google API credentials missing. Check Google Cloud Console.");
+        return {
+          success: false,
+          reason: "missing_credentials",
+          message: "Google API credentials are not configured. Please verify in Google Cloud Console."
+        };
       }
   
-      // Load Google APIs if not already loaded
+      // Step 2: Load Google APIs if not already loaded
       await this.loadGoogleApi();
       await this.initializeGapiClient();
   
-      // Retrieve stored token if available
+      // Step 3: Retrieve stored token if available
       const storedToken = localStorage.getItem("oauth_token");
       const storedExpiry = localStorage.getItem("oauth_token_expiry");
       const now = Date.now();
@@ -230,20 +233,25 @@ async loadGoogleApi() {
   
       console.log("No valid stored token found. Requesting a new one...");
   
-      // Ensure token client is initialized
+      // Step 4: Initialize Google OAuth Token Client (Use Redirect Mode)
       if (!this.tokenClient) {
         this.tokenClient = google.accounts.oauth2.initTokenClient({
           client_id: this.CLIENT_ID,
           scope: this.SCOPES,
-          ux_mode: "redirect", // Redirect-based auth for better stability
+          ux_mode: "redirect", // Redirect mode prevents popup blocking issues
           redirect_uri: window.location.href.split("#")[0],
           callback: (tokenResponse) => {
             if (tokenResponse && tokenResponse.access_token) {
-              console.log("Received new access token.");
+              console.log("Successfully obtained new access token.");
               this.gapi.client.setToken(tokenResponse);
               this.isAuthorized = true;
+  
+              // Store token for future use
               localStorage.setItem("oauth_token", tokenResponse.access_token);
-              localStorage.setItem("oauth_token_expiry", Date.now() + (parseInt(tokenResponse.expires_in, 10) * 1000));
+              localStorage.setItem(
+                "oauth_token_expiry",
+                Date.now() + (parseInt(tokenResponse.expires_in, 10) * 1000)
+              );
             } else {
               console.error("Failed to obtain access token.");
             }
@@ -255,9 +263,11 @@ async loadGoogleApi() {
         });
       }
   
-      // Start authentication request
+      // Step 5: Request Access Token (Trigger Redirect)
       return new Promise((resolve) => {
         this.tokenClient.requestAccessToken({ prompt: "consent" });
+  
+        // Step 6: Set up a timeout in case authorization hangs
         const checkInterval = setInterval(() => {
           if (this.isAuthorized) {
             clearInterval(checkInterval);
@@ -267,16 +277,24 @@ async loadGoogleApi() {
   
         setTimeout(() => {
           clearInterval(checkInterval);
-          resolve({ success: false, reason: "auth_timeout", message: "Authorization timed out." });
-        }, 60000); // Timeout after 60 seconds
+          resolve({
+            success: false,
+            reason: "auth_timeout",
+            message: "Authorization request timed out. Please try again."
+          });
+        }, 60000); // 60s timeout to prevent hanging
       });
+  
     } catch (error) {
       console.error("Authorization failed:", error);
       this.isAuthorized = false;
-      return { success: false, reason: "auth_error", message: error.message || "Unknown error." };
+      return {
+        success: false,
+        reason: "auth_error",
+        message: error.message || "Unknown authorization error"
+      };
     }
   }
-  
   
   // Get spreadsheet ID from storage or create a new one
   async getSpreadsheetId() {

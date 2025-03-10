@@ -243,124 +243,130 @@ class UIManager {
     async checkAndPerformAuthentication() {
       // Show authentication step
       const stepContent = document.getElementById('onboarding-step-content');
+      if (!stepContent) {
+          console.error('Onboarding step content element not found');
+          return false;
+      }
+      
       stepContent.innerHTML = `
-        <div class="onboarding-step">
-          <h2>Connect to Google</h2>
-          <p>Now let's connect to your Google account to set up the spreadsheet.</p>
-          <p>Your data remains private in your own Google account.</p>
-          
-          <div class="loading-status" id="auth-status">
-            <div class="spinner"></div>
-            <p>Checking authentication status...</p>
+          <div class="onboarding-step">
+              <h2>Connect to Google</h2>
+              <p>Now let's connect to your Google account to set up the spreadsheet.</p>
+              <p>Your data remains private in your own Google account.</p>
+              
+              <div class="loading-status" id="auth-status">
+                  <div class="spinner"></div>
+                  <p>Checking authentication status...</p>
+              </div>
+              
+              <div class="onboarding-actions" id="auth-actions" style="display: none;">
+                  <button id="prev-button" class="secondary-button">Back</button>
+                  <button id="auth-button" class="primary-button">Connect with Google</button>
+              </div>
           </div>
-          
-          <div class="onboarding-actions" id="auth-actions" style="display: none;">
-            <button id="prev-button" class="secondary-button">Back</button>
-            <button id="auth-button" class="primary-button">Connect with Google</button>
-          </div>
-        </div>
       `;
       
-      // Update the step indicators
       this.updateStepIndicators(3);
       
-      // Check current authentication status
       try {
-        const authResult = await this.app.sync.authorize();
-        
-        const statusDiv = document.getElementById('auth-status');
-        const actionsDiv = document.getElementById('auth-actions');
-        
-        if (authResult.success) {
-          // Already authenticated
-          statusDiv.innerHTML = `
-            <div class="success-icon">✓</div>
-            <p>Successfully connected to Google!</p>
-          `;
-          
-          // Short delay then move to next step
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return true;
-        } else {
-          // Not authenticated, show button
-          statusDiv.innerHTML = `
-            <div class="info-icon">ℹ️</div>
-            <p>Google authentication required.</p>
-          `;
-          actionsDiv.style.display = 'flex';
-          
-          // Return a promise that resolves when authenticated
-          return new Promise(resolve => {
-            document.getElementById('prev-button').addEventListener('click', () => {
-              this.checkAndCollectCredentials().then(() => resolve(false));
-            });
-            
-            document.getElementById('auth-button').addEventListener('click', async () => {
-              try {
-                statusDiv.innerHTML = `
-                  <div class="spinner"></div>
-                  <p>Connecting to Google...</p>
-                `;
-                actionsDiv.style.display = 'none';
-                
-                const newAuthResult = await this.app.sync.authorize();
-                
-                if (newAuthResult.success) {
-                  statusDiv.innerHTML = `
-                    <div class="success-icon">✓</div>
-                    <p>Successfully connected to Google!</p>
-                  `;
+          const authResult = await this.app.sync.authorize();
+          const statusDiv = document.getElementById('auth-status');
+          const actionsDiv = document.getElementById('auth-actions');
+  
+          if (!statusDiv || !actionsDiv) {
+              console.error('Authentication UI elements not found');
+              return false;
+          }
+  
+          if (authResult.success) {
+              statusDiv.innerHTML = `
+                  <div class="success-icon">✓</div>
+                  <p>Successfully connected to Google!</p>
+              `;
+              
+              await new Promise(resolve => setTimeout(resolve, 1500));
+              return true;
+          } else {
+              statusDiv.innerHTML = `
+                  <div class="info-icon">ℹ️</div>
+                  <p>Google authentication required.</p>
+              `;
+              actionsDiv.style.display = 'flex';
+              
+              return new Promise(resolve => {
+                  document.getElementById('prev-button')?.addEventListener('click', () => {
+                      this.checkAndCollectCredentials().then(() => resolve(false));
+                  });
                   
-                  // Short delay then move to next step
-                  await new Promise(resolve => setTimeout(resolve, 1500));
-                  resolve(true);
-                } else {
-                  throw new Error(newAuthResult.message);
-                }
-              } catch (error) {
-                console.error('Authentication failed:', error);
-                statusDiv.innerHTML = `
-                  <div class="error-icon">❌</div>
-                  <p>Authentication failed: ${error.message}</p>
-                `;
-                actionsDiv.style.display = 'flex';
-              }
-            });
-          });
-        }
+                  document.getElementById('auth-button')?.addEventListener('click', async () => {
+                      try {
+                          statusDiv.innerHTML = `
+                              <div class="spinner"></div>
+                              <p>Connecting to Google...</p>
+                          `;
+                          actionsDiv.style.display = 'none';
+                          
+                          const newAuthResult = await this.app.sync.authorize();
+                          
+                          if (newAuthResult.success) {
+                              statusDiv.innerHTML = `
+                                  <div class="success-icon">✓</div>
+                                  <p>Successfully connected to Google!</p>
+                              `;
+                              
+                              await new Promise(resolve => setTimeout(resolve, 1500));
+                              resolve(true);
+                          } else {
+                              throw new Error(newAuthResult.message);
+                          }
+                      } catch (error) {
+                          console.error('Authentication failed:', error);
+                          statusDiv.innerHTML = `
+                              <div class="error-icon">❌</div>
+                              <p>Authentication failed: ${error.message}</p>
+                          `;
+                          actionsDiv.style.display = 'flex';
+                      }
+                  });
+              });
+          }
       } catch (error) {
-        console.error('Error checking auth status:', error);
-        
-        const statusDiv = document.getElementById('auth-status');
-        statusDiv.innerHTML = `
-          <div class="error-icon">❌</div>
-          <p>Error checking authentication: ${error.message}</p>
-        `;
-        
-        document.getElementById('auth-actions').style.display = 'flex';
-        
-        // Return a promise that resolves when authenticated
-        return new Promise(resolve => {
-          document.getElementById('prev-button').addEventListener('click', () => {
-            this.checkAndCollectCredentials().then(() => resolve(false));
-          });
+          console.error('Error checking auth status:', error);
           
-          document.getElementById('auth-button').addEventListener('click', async () => {
-            try {
-              const authResult = await this.app.sync.authorize();
-              if (authResult.success) {
-                resolve(true);
-              } else {
-                throw new Error(authResult.message);
-              }
-            } catch (error) {
-              console.error('Authentication failed:', error);
-              alert('Authentication failed: ' + error.message);
-            }
+          const statusDiv = document.getElementById('auth-status');
+          if (statusDiv) {
+              statusDiv.innerHTML = `
+                  <div class="error-icon">❌</div>
+                  <p>Error checking authentication: ${error.message}</p>
+              `;
+          }
+          
+          const actionsDiv = document.getElementById('auth-actions');
+          if (actionsDiv) {
+              actionsDiv.style.display = 'flex';
+          }
+          
+          return new Promise(resolve => {
+              document.getElementById('prev-button')?.addEventListener('click', () => {
+                  this.checkAndCollectCredentials().then(() => resolve(false));
+              });
+              
+              document.getElementById('auth-button')?.addEventListener('click', async () => {
+                  try {
+                      const authResult = await this.app.sync.authorize();
+                      if (authResult.success) {
+                          resolve(true);
+                      } else {
+                          throw new Error(authResult.message);
+                      }
+                  } catch (error) {
+                      console.error('Authentication failed:', error);
+                      alert('Authentication failed: ' + error.message);
+                  }
+              });
           });
-        });
       }
-    }
+  }
     
     // Step 4: Check and initialize Google Sheets
     async checkAndInitializeSheets() {
