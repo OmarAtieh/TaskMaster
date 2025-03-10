@@ -352,18 +352,14 @@ class UIManager {
               });
               
               document.getElementById('auth-button')?.addEventListener('click', async () => {
-                  try {
-                      const authResult = await this.app.sync.authorize();
-                      if (authResult.success) {
-                          resolve(true);
-                      } else {
-                          throw new Error(authResult.message);
-                      }
-                  } catch (error) {
-                      console.error('Authentication failed:', error);
-                      alert('Authentication failed: ' + error.message);
-                  }
-              });
+                console.log("User clicked Authenticate");
+                const authResult = await this.app.sync.authorize();
+                if (authResult.success) {
+                    console.log("Authentication successful!");
+                } else {
+                    console.error("Authentication failed:", authResult.message);
+                }
+            });
           });
       }
   }

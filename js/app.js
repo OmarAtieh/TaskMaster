@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '12'; // Can be incremented with each build
+const BUILD_NUMBER = '13'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -344,9 +344,10 @@ class TaskMasterApp {
             // Retrieve API credentials from storage
             this.CLIENT_ID = await this.storage.get("google_client_id");
             this.API_KEY = await this.storage.get("google_api_key");
-    
+
             if (!this.CLIENT_ID || !this.API_KEY) {
-                console.warn("Google API credentials missing. They will be requested during setup.");
+                console.error("Google API credentials missing. Check Google Cloud Console.");
+                return { success: false, message: "Missing Google API credentials." };
             }
     
             // Create UI fallbacks immediately
