@@ -408,23 +408,20 @@ async loadGoogleApi() {
       // IMPORTANT: Verify we have a valid token
       const token = this.gapi.client.getToken();
       if (!token || !token.access_token) {
-        console.log('No valid token found, requesting a new one');
+        // Check if we have a stored token from redirect
+        const storedToken = localStorage.getItem('oauth_token');
+        const tokenExpiry = localStorage.getItem('oauth_token_expiry');
         
-        // If we don't have a token client, we can't proceed
-        if (!this.tokenClient) {
-          throw new Error('Token client not initialized and no valid token available');
+        if (storedToken && tokenExpiry && parseInt(tokenExpiry) > Date.now()) {
+          console.log('Using stored token from redirect');
+          this.gapi.client.setToken({
+            access_token: storedToken,
+            expires_in: Math.floor((parseInt(tokenExpiry) - Date.now()) / 1000)
+          });
+        } else {
+          console.log('No valid token found, requesting a new one');
+          // Rest of your existing code for redirect...
         }
-        
-        // For redirect flow, we can't use promises/await as the page will reload
-        // So we'll store state and redirect
-        await this.storage.set('resumeAction', 'createSpreadsheet');
-        
-        // Request token via redirect
-        this.tokenClient.requestAccessToken();
-        
-        // This code won't execute immediately as the page will redirect
-        // But we need to return something to satisfy TypeScript/linters
-        throw new Error('Redirecting for authentication');
       }
       
       console.log('Creating spreadsheet with token:', !!this.gapi.client.getToken());

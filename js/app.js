@@ -51,6 +51,217 @@ class TaskMasterApp {
         }
       }
 
+      ensureUIMethodsExist() {
+        // Make sure we have a reference to the app container
+        this.appElement = this.appElement || document.getElementById('app') || document.body;
+        
+        // Create UI object if it doesn't exist
+        if (!this.ui) {
+          this.ui = {};
+        }
+        
+        // Add showAuthError if not defined
+        if (!this.ui.showAuthError) {
+          this.ui.showAuthError = (message, retryCallback) => {
+            this.appElement.innerHTML = `
+              <div class="error-container">
+                <div class="error-header">
+                  ${this.graphics && this.graphics.getAppLogo ? 
+                    `<div class="app-logo">${this.graphics.getAppLogo(64)}</div>` : 
+                    '<div class="app-logo">📝</div>'}
+                  <h1>Google Authorization Failed</h1>
+                </div>
+                
+                <div class="error-content">
+                  <p>${message}</p>
+                  
+                  <div class="error-actions">
+                    <button id="retry-auth" class="primary-button">Try Again</button>
+                    <button id="setup-credentials" class="secondary-button">Update Credentials</button>
+                  </div>
+                </div>
+              </div>
+            `;
+            
+            document.getElementById('retry-auth').addEventListener('click', () => {
+              if (typeof retryCallback === 'function') {
+                retryCallback();
+              } else {
+                window.location.reload();
+              }
+            });
+            
+            document.getElementById('setup-credentials').addEventListener('click', () => {
+              if (this.showCredentialsForm) {
+                this.showCredentialsForm();
+              } else {
+                window.location.reload();
+              }
+            });
+          };
+        }
+        
+        // Add showSheetsInitError if not defined
+        if (!this.ui.showSheetsInitError) {
+          this.ui.showSheetsInitError = (message, retryCallback) => {
+            this.appElement.innerHTML = `
+              <div class="error-container">
+                <div class="error-header">
+                  ${this.graphics && this.graphics.getAppLogo ? 
+                    `<div class="app-logo">${this.graphics.getAppLogo(64)}</div>` : 
+                    '<div class="app-logo">📝</div>'}
+                  <h1>Google Sheets Setup Failed</h1>
+                </div>
+                
+                <div class="error-content">
+                  <p>${message}</p>
+                  <p>This could be due to API restrictions or permissions issues.</p>
+                  
+                  <div class="help-text">
+                    <strong>Possible solutions:</strong>
+                    <ul>
+                      <li>Make sure Google Sheets API is enabled in your Google Cloud project</li>
+                      <li>Verify your API credentials have the correct permissions</li>
+                      <li>Check that your domain is authorized in the Google Cloud Console</li>
+                    </ul>
+                  </div>
+                  
+                  <div class="error-actions">
+                    <button id="retry-sheets" class="primary-button">Try Again</button>
+                    <button id="update-credentials" class="secondary-button">Update Credentials</button>
+                  </div>
+                </div>
+              </div>
+            `;
+            
+            document.getElementById('retry-sheets').addEventListener('click', () => {
+              if (typeof retryCallback === 'function') {
+                retryCallback();
+              } else {
+                window.location.reload();
+              }
+            });
+            
+            document.getElementById('update-credentials').addEventListener('click', () => {
+              if (this.ui.showCredentialsForm) {
+                this.ui.showCredentialsForm();
+              } else if (this.showCredentialsForm) {
+                this.showCredentialsForm();
+              } else {
+                window.location.reload();
+              }
+            });
+          };
+        }
+        
+        // Add showSetupOptionsError if not defined
+        if (!this.ui.showSetupOptionsError) {
+          this.ui.showSetupOptionsError = (error, retryCallback) => {
+            this.appElement.innerHTML = `
+              <div class="error-container">
+                <div class="error-header">
+                  ${this.graphics && this.graphics.getAppLogo ? 
+                    `<div class="app-logo">${this.graphics.getAppLogo(64)}</div>` : 
+                    '<div class="app-logo">📝</div>'}
+                  <h1>Setup Encountered an Issue</h1>
+                </div>
+                
+                <div class="error-content">
+                  <p>${error.message || 'An error occurred during setup.'}</p>
+                  
+                  <div class="error-options">
+                    <div class="error-option">
+                      <h3>Try Again</h3>
+                      <p>Retry the setup process from the beginning.</p>
+                      <button id="retry-setup" class="primary-button">Retry Setup</button>
+                    </div>
+                    
+                    <div class="error-option">
+                      <h3>Update Google API Credentials</h3>
+                      <p>Enter new Google API credentials.</p>
+                      <button id="update-api-credentials" class="secondary-button">Update Credentials</button>
+                    </div>
+                    
+                    <div class="error-option">
+                      <h3>Start Fresh</h3>
+                      <p>Reset the application and start from scratch.</p>
+                      <button id="reset-app" class="tertiary-button">Reset Application</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            `;
+            
+            document.getElementById('retry-setup').addEventListener('click', () => {
+              if (typeof retryCallback === 'function') {
+                retryCallback();
+              } else {
+                window.location.reload();
+              }
+            });
+            
+            document.getElementById('update-api-credentials').addEventListener('click', () => {
+              if (this.ui.showCredentialsForm) {
+                this.ui.showCredentialsForm();
+              } else if (this.showCredentialsForm) {
+                this.showCredentialsForm();
+              } else {
+                window.location.reload();
+              }
+            });
+            
+            document.getElementById('reset-app').addEventListener('click', async () => {
+              if (confirm('This will reset the application completely. Continue?')) {
+                if (this.storage) {
+                  try {
+                    await this.storage.clear();
+                  } catch (e) {
+                    console.error('Error clearing storage:', e);
+                  }
+                }
+                window.location.reload();
+              }
+            });
+          };
+        }
+        
+        // Add showOnboardingError if not defined
+        if (!this.ui.showOnboardingError) {
+          this.ui.showOnboardingError = (message) => {
+            this.appElement.innerHTML = `
+              <div class="error-container">
+                <div class="error-header">
+                  ${this.graphics && this.graphics.getAppLogo ? 
+                    `<div class="app-logo">${this.graphics.getAppLogo(64)}</div>` : 
+                    '<div class="app-logo">📝</div>'}
+                  <h1>Onboarding Error</h1>
+                </div>
+                
+                <div class="error-content">
+                  <p>${message}</p>
+                  <button id="restart-button" class="primary-button">Restart Setup</button>
+                </div>
+              </div>
+            `;
+            
+            document.getElementById('restart-button').addEventListener('click', () => {
+              window.location.reload();
+            });
+          };
+        }
+        
+        // Add checkPendingNotifications for NotificationManager compatibility
+        if (this.notifications && !this.notifications.checkForPendingNotifications) {
+          this.notifications.checkForPendingNotifications = () => {
+            // If the actual method exists with a different name, call it
+            if (this.notifications.checkPendingNotifications) {
+              return this.notifications.checkPendingNotifications();
+            }
+            console.log('Pending notifications check skipped - method not implemented');
+          };
+        }
+      }
+
       async checkResumeActions() {
         try {
           // Check if we need to resume an action after redirect
@@ -122,8 +333,31 @@ class TaskMasterApp {
     async initializeApp() {
         try {
 
-            // Set up a fallback for appElement right away
-            this.appElement = document.getElementById('app');
+            // Set up appElement and basic UI fallbacks right away
+            this.appElement = document.getElementById('app') || document.body;
+            this.ensureUIMethodsExist();
+            
+            // Process URL hash first to see if we're coming back from authentication
+            const hash = window.location.hash;
+            if (hash && hash.includes('access_token')) {
+              console.log('Detected token in URL - coming back from auth redirect');
+              
+              // Parse token from URL
+              const params = {};
+              hash.substring(1).split('&').forEach(pair => {
+                const [key, value] = pair.split('=');
+                params[key] = decodeURIComponent(value);
+              });
+              
+              // Clean up the URL
+              if (window.history && window.history.replaceState) {
+                window.history.replaceState({}, document.title, window.location.pathname);
+              }
+              
+              // Store token information for later use
+              localStorage.setItem('oauth_token', params.access_token);
+              localStorage.setItem('oauth_token_expiry', Date.now() + (parseInt(params.expires_in || '3600') * 1000));
+            }
             // Add fallbacks for missing UI methods
             if (!this.ui) this.ui = {};
             // Set up event listeners for online/offline status
@@ -268,6 +502,14 @@ class TaskMasterApp {
     
     async normalStartup() {
         try {
+            // Ensure UI methods before checking resume actions
+            this.ensureUIMethodsExist();
+            
+            // Check for resume actions
+            await this.checkResumeActions();
+            
+            // Rest of normal startup...
+            this.showLoadingMessage('Checking authorization...');
             // Check for resume actions first
             await this.checkResumeActions();
             this.showLoadingMessage('Checking authorization...');
