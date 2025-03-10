@@ -203,98 +203,96 @@ async loadGoogleApi() {
   // Authorize with Google
   async authorize() {
     try {
-      console.log("Starting authorization process...");
-  
-      // Step 1: Ensure credentials are loaded before proceeding
-      if (!this.CLIENT_ID || !this.API_KEY) {
-        console.error("Google API credentials missing. Check Google Cloud Console.");
-        return {
-          success: false,
-          reason: "missing_credentials",
-          message: "Google API credentials are not configured. Please verify in Google Cloud Console."
-        };
-      }
-  
-      // Step 2: Load Google APIs if not already loaded
-      await this.loadGoogleApi();
-      await this.initializeGapiClient();
-  
-      // Step 3: Retrieve stored token if available
-      const storedToken = localStorage.getItem("oauth_token");
-      const storedExpiry = localStorage.getItem("oauth_token_expiry");
-      const now = Date.now();
-  
-      if (storedToken && storedExpiry && now < parseInt(storedExpiry, 10)) {
-        console.log("Using stored OAuth token.");
-        this.gapi.client.setToken({ access_token: storedToken });
-        this.isAuthorized = true;
-        return { success: true };
-      }
-  
-      console.log("No valid stored token found. Requesting a new one...");
-  
-      // Step 4: Initialize Google OAuth Token Client (Use Redirect Mode)
-      if (!this.tokenClient) {
-        this.tokenClient = google.accounts.oauth2.initTokenClient({
-          client_id: this.CLIENT_ID,
-          scope: this.SCOPES,
-          ux_mode: "redirect", // Redirect mode prevents popup blocking issues
-          redirect_uri: window.location.href.split("#")[0],
-          callback: (tokenResponse) => {
-            if (tokenResponse && tokenResponse.access_token) {
-              console.log("Successfully obtained new access token.");
-              this.gapi.client.setToken(tokenResponse);
-              this.isAuthorized = true;
-  
-              // Store token for future use
-              localStorage.setItem("oauth_token", tokenResponse.access_token);
-              localStorage.setItem(
-                "oauth_token_expiry",
-                Date.now() + (parseInt(tokenResponse.expires_in, 10) * 1000)
-              );
-            } else {
-              console.error("Failed to obtain access token.");
-            }
-          },
-          error_callback: (error) => {
-            console.error("OAuth Error:", error);
-            this.isAuthorized = false;
-          },
+        console.log("Starting authorization process...");
+
+        // Load API credentials from storage
+        this.CLIENT_ID = this.CLIENT_ID || await this.storage.get("google_client_id");
+        this.API_KEY = this.API_KEY || await this.storage.get("google_api_key");
+
+        if (!this.CLIENT_ID || !this.API_KEY) {
+            console.error("Google API credentials missing. Ensure they are set in settings.");
+            return { success: false, reason: "missing_credentials", message: "Google API credentials are required." };
+        }
+
+        // Ensure Google API and Identity Services are loaded
+        await this.loadGoogleApi();
+        await this.initializeGapiClient();
+
+        // Check if a token is already stored
+        const storedToken = localStorage.getItem("oauth_token");
+        const storedExpiry = localStorage.getItem("oauth_token_expiry");
+        const now = Date.now();
+
+        if (storedToken && storedExpiry && now < parseInt(storedExpiry, 10)) {
+            console.log("Using stored OAuth token.");
+            this.gapi.client.setToken({ access_token: storedToken });
+            this.isAuthorized = true;
+            return { success: true };
+        }
+
+        console.log("No valid stored token found. Checking for redirect tokens...");
+
+        // Handle tokens from redirect-based authentication
+        const hash = window.location.hash;
+        if (hash.includes("access_token")) {
+            console.log("Detected OAuth token in URL, processing...");
+            const params = new URLSearchParams(hash.substring(1));
+            const tokenObj = {
+                access_token: params.get("access_token"),
+                expires_in: params.get("expires_in") || 3600,
+                token_type: params.get("token_type") || "Bearer"
+            };
+
+            this.gapi.client.setToken(tokenObj);
+            localStorage.setItem("oauth_token", tokenObj.access_token);
+            localStorage.setItem("oauth_token_expiry", Date.now() + tokenObj.expires_in * 1000);
+            this.isAuthorized = true;
+
+            // Clean up the URL to remove access tokens from the hash
+            window.history.replaceState({}, document.title, window.location.pathname);
+
+            return { success: true };
+        }
+
+        console.log("Requesting new OAuth token...");
+
+        // Ensure token client is initialized before making a request
+        if (!this.tokenClient) {
+            this.tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: this.CLIENT_ID,
+                scope: this.SCOPES,
+                ux_mode: "redirect",
+                redirect_uri: window.location.href.split("#")[0]
+            });
+        }
+
+        // Trigger OAuth login request
+        return new Promise((resolve) => {
+            this.tokenClient.requestAccessToken({ prompt: "consent" });
+
+            // Check if authorization completes within 60 seconds
+            const checkInterval = setInterval(() => {
+                if (this.isAuthorized) {
+                    clearInterval(checkInterval);
+                    resolve({ success: true });
+                }
+            }, 500);
+
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                resolve({
+                    success: false,
+                    reason: "auth_timeout",
+                    message: "Authorization request timed out. Please try again."
+                });
+            }, 60000);
         });
-      }
-  
-      // Step 5: Request Access Token (Trigger Redirect)
-      return new Promise((resolve) => {
-        this.tokenClient.requestAccessToken({ prompt: "consent" });
-  
-        // Step 6: Set up a timeout in case authorization hangs
-        const checkInterval = setInterval(() => {
-          if (this.isAuthorized) {
-            clearInterval(checkInterval);
-            resolve({ success: true });
-          }
-        }, 500); // Check every 500ms for token success
-  
-        setTimeout(() => {
-          clearInterval(checkInterval);
-          resolve({
-            success: false,
-            reason: "auth_timeout",
-            message: "Authorization request timed out. Please try again."
-          });
-        }, 60000); // 60s timeout to prevent hanging
-      });
-  
     } catch (error) {
-      console.error("Authorization failed:", error);
-      this.isAuthorized = false;
-      return {
-        success: false,
-        reason: "auth_error",
-        message: error.message || "Unknown authorization error"
-      };
+        console.error("Authorization failed:", error);
+        return { success: false, reason: "auth_error", message: error.message || "Unknown error" };
     }
-  }
+}
+
   
   // Get spreadsheet ID from storage or create a new one
   async getSpreadsheetId() {

@@ -280,7 +280,7 @@ class UIManager {
   
           if (authResult.success) {
               statusDiv.innerHTML = `
-                  <div class="success-icon">✓</div>
+                  <div class="success-icon">&#10003;</div>
                   <p>Successfully connected to Google!</p>
               `;
               
@@ -288,7 +288,7 @@ class UIManager {
               return true;
           } else {
               statusDiv.innerHTML = `
-                  <div class="info-icon">ℹ️</div>
+                  <div class="info-icon">&#9432;</div>
                   <p>Google authentication required.</p>
               `;
               actionsDiv.style.display = 'flex';
@@ -310,7 +310,7 @@ class UIManager {
                           
                           if (newAuthResult.success) {
                               statusDiv.innerHTML = `
-                                  <div class="success-icon">✓</div>
+                                  <div class="success-icon">&#10003;</div>
                                   <p>Successfully connected to Google!</p>
                               `;
                               
@@ -322,7 +322,7 @@ class UIManager {
                       } catch (error) {
                           console.error('Authentication failed:', error);
                           statusDiv.innerHTML = `
-                              <div class="error-icon">❌</div>
+                              <div class="error-icon">&#10060;</div>
                               <p>Authentication failed: ${error.message}</p>
                           `;
                           actionsDiv.style.display = 'flex';
@@ -336,7 +336,7 @@ class UIManager {
           const statusDiv = document.getElementById('auth-status');
           if (statusDiv) {
               statusDiv.innerHTML = `
-                  <div class="error-icon">❌</div>
+                  <div class="error-icon">&#10060;</div>
                   <p>Error checking authentication: ${error.message}</p>
               `;
           }
@@ -367,6 +367,7 @@ class UIManager {
           });
       }
   }
+  
     
     // Step 4: Check and initialize Google Sheets
     async checkAndInitializeSheets() {

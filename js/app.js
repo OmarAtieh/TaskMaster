@@ -1,7 +1,7 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
 const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '9'; // Can be incremented with each build
+const BUILD_NUMBER = '10'; // Can be incremented with each build
 
 document.addEventListener('DOMContentLoaded', () => {
     const app = new TaskMasterApp();
@@ -332,9 +332,19 @@ class TaskMasterApp {
     
       async initializeApp() {
         try {
+            console.log("Initializing application...");
+    
             // Set up appElement right away
             this.appElement = document.getElementById('app') || document.body;
-            
+    
+            // Ensure API credentials are retrieved from storage on startup
+            this.CLIENT_ID = await this.storage.get("google_client_id");
+            this.API_KEY = await this.storage.get("google_api_key");
+    
+            if (!this.CLIENT_ID || !this.API_KEY) {
+                console.warn("Google API credentials missing. They will be requested during setup.");
+            }
+    
             // Create UI fallbacks immediately
             if (!this.ui) {
                 this.ui = {}; // Ensures `this.ui` exists
@@ -361,36 +371,36 @@ class TaskMasterApp {
                 console.log('Detected token in URL - coming back from auth redirect');
                 
                 // Parse token from URL
-                const params = {};
-                hash.substring(1).split('&').forEach(pair => {
-                    const [key, value] = pair.split('=');
-                    params[key] = decodeURIComponent(value);
-                });
+                const params = new URLSearchParams(hash.substring(1));
+                const accessToken = params.get("access_token");
+                const expiresIn = parseInt(params.get("expires_in") || "3600") * 1000;
     
-                // Clean up the URL
-                if (window.history && window.history.replaceState) {
-                    window.history.replaceState({}, document.title, window.location.pathname);
+                if (accessToken) {
+                    // Store token information for later use
+                    localStorage.setItem("oauth_token", accessToken);
+                    localStorage.setItem("oauth_token_expiry", Date.now() + expiresIn);
+    
+                    // Clean up the URL
+                    if (window.history.replaceState) {
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
                 }
-    
-                // Store token information for later use
-                localStorage.setItem('oauth_token', params.access_token);
-                localStorage.setItem('oauth_token_expiry', Date.now() + (parseInt(params.expires_in || '3600') * 1000));
             }
     
             // Set up event listeners for online/offline status
-            window.addEventListener('online', () => this.handleOnlineStatus(true));
-            window.addEventListener('offline', () => this.handleOnlineStatus(false));
+            window.addEventListener("online", () => this.handleOnlineStatus(true));
+            window.addEventListener("offline", () => this.handleOnlineStatus(false));
     
             // Apply theme immediately to prevent flash
             this.applyTheme(this.config.theme);
     
             // Show loading message
-            this.showLoadingMessage('Initializing...');
+            this.showLoadingMessage("Initializing...");
     
             // Initialize storage
             this.storage = new StorageManager();
             await this.storage.initialize();
-            this.showLoadingMessage('Storage initialized...');
+            this.showLoadingMessage("Storage initialized...");
     
             // Load or create user preferences
             this.preferences = await this.loadPreferences();
@@ -407,7 +417,7 @@ class TaskMasterApp {
             this.dailyMissions = new DailyMissionManager(this);
     
             this.logAppVersion();
-            this.showLoadingMessage('Modules loaded...');
+            this.showLoadingMessage("Modules loaded...");
     
             // Initialize UI manager last (depends on other modules)
             this.ui = new UIManager(this);
@@ -425,18 +435,17 @@ class TaskMasterApp {
             }
     
             // Check if this is the first run
-            const isFirstRun = !(await this.storage.get('app_initialized'));
+            const isFirstRun = !(await this.storage.get("app_initialized"));
             if (isFirstRun) {
                 await this.firstTimeSetup();
             } else {
                 await this.normalStartup();
             }
         } catch (error) {
-            console.error('Application initialization failed:', error);
-            this.showErrorScreen('Initialization failed', error.message);
+            console.error("Application initialization failed:", error);
+            this.showErrorScreen("Initialization failed", error.message);
         }
     }
-    
     
     async loadPreferences() {
         // Get stored preferences or use defaults
