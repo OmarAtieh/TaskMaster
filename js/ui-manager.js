@@ -18,44 +18,51 @@ class UIManager {
     }
     
     // Show the initial onboarding UI
-    async showOnboarding() {
-      // Show initial onboarding UI with first step only
-      const appElement = document.getElementById("app");
-      
-      if (!this.app.graphics) {
-          console.warn("Graphics module not initialized, using default logo.");
-          this.app.graphics = new UIGraphics(); // Ensure the graphics object exists
-      }
+    showOnboardingScreen() { // Renamed from showOnboarding and simplified
+        if (!this.onboardingView) {
+            // Ensure OnboardingView is available, typically via a script tag in index.html
+            if (typeof OnboardingView === 'undefined') {
+                console.error("OnboardingView class is not defined. Make sure onboarding.js is loaded.");
+                // Fallback or error display
+                this.appElement.innerHTML = `<div class="error-message">Error: Onboarding module not found.</div>`;
+                return;
+            }
+            this.onboardingView = new OnboardingView(this);
+        }
 
-    const appLogoSVG = this.app.graphics.getAppLogo(80); // Use existing function
+        // Ensure there's a container for onboarding in index.html or created dynamically by OnboardingView
+        // For this example, OnboardingView creates its own container if needed or uses one specified by its onboardingContainerId.
+        // We will ensure a general 'app' container exists, OnboardingView can decide to replace its content or append to it.
+        if (!document.getElementById(this.onboardingView.onboardingContainerId)) {
+            let mainContainer = document.getElementById('app'); // Assuming 'app' is the main container defined in index.html
+            if (!mainContainer) {
+                console.error("Main application container with id 'app' not found.");
+                document.body.innerHTML = `<div class="error-message">Critical Error: Main app container missing.</div>`;
+                return;
+            }
+            // Create a specific container for onboarding if OnboardingView expects one
+            const onboardingContainer = document.createElement('div');
+            onboardingContainer.id = this.onboardingView.onboardingContainerId;
+            mainContainer.innerHTML = ''; // Clear the main container
+            mainContainer.appendChild(onboardingContainer); // Append the onboarding container
+        }
+        
+        this.onboardingView.startOnboarding();
+    }
 
-      this.appElement.innerHTML = `
-        <div class="onboarding-container">
-          <div class="onboarding-header">
-            <div class="app-logo">${appLogoSVG}</div>
-            <h1>Welcome to TaskMaster</h1>
-          </div>
-          
-          <div class="onboarding-content">
-            <div class="step-indicator">
-              <div class="step active">1</div>
-              <div class="step-line"></div>
-              <div class="step">2</div>
-              <div class="step-line"></div>
-              <div class="step">3</div>
-              <div class="step-line"></div>
-              <div class="step">4</div>
-            </div>
-            
-            <div id="onboarding-step-content">
-              <!-- Step content will be loaded here -->
-            </div>
-          </div>
-        </div>
-      `;
-      
-      // Start the sequential onboarding process
-      await this.startOnboardingSequence();
+    // Method for OnboardingView to call when it's done
+    hideOnboarding() {
+        if (this.onboardingView && document.getElementById(this.onboardingView.onboardingContainerId)) {
+            const onboardingContainer = document.getElementById(this.onboardingView.onboardingContainerId);
+            onboardingContainer.innerHTML = ''; // Clear onboarding content
+            // Or onboardingContainer.remove(); if it's a dedicated, temporary container
+            onboardingContainer.style.display = 'none'; // Hide it
+        }
+        console.log("Onboarding hidden. Proceeding to main app view.");
+        // Here, you would typically render the main application screen,
+        // e.g., by calling a method like this.renderMainApp() or this.showMainDashboard()
+        // For now, let's assume renderMainApp() is the correct method.
+        this.renderMainApp(); // Or this.app.normalStartup() if that handles the UI transition
     }
     
     // New method to handle the sequential onboarding process
@@ -494,7 +501,8 @@ class UIManager {
     async completeSetup() {
       // This will be called when the user finishes onboarding
       await this.app.storage.set('app_initialized', true);
-      await this.app.normalStartup();
+      // await this.app.normalStartup(); // normalStartup will be called by app.js after onboarding completes.
+      this.hideOnboarding(); // This will render the main app.
     }
     
     // Render the main application UI
