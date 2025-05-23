@@ -122,10 +122,15 @@ class TasksView {
         case 'today':
           return { dueToday: true };
         case 'upcoming':
-          // Only include non-overdue future tasks
-          return { status: 'not_started' }; // This is simplified - a real implementation would filter by date
+          // Tasks that are not completed, and due date is today or in the future.
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Set to the beginning of today
+          return { 
+            status_not_in: ['completed'], 
+            minDueDate: today.toISOString().split('T')[0] // Format as YYYY-MM-DD
+          };
         case 'overdue':
-          return { overdue: true };
+          return { overdue: true }; // Assumes TaskManager handles this based on due_date < today and status != completed
         case 'completed':
           return { status: 'completed' };
         case 'all':
@@ -177,13 +182,21 @@ class TasksView {
           </div>
         `;
       }
+
+      // Recurring task icon
+      const recurringIcon = task.is_recurring ? '<span class="recurring-icon" title="Recurring Task">🔄</span>' : '';
       
+      // Difficulty indicator
+      const difficultyIndicator = `<span class.difficulty-indicator" title="Difficulty: ${task.difficulty}">D${task.difficulty || 'N/A'}</span>`;
+
       return `
         <div class="task-card ${statusClass}" data-task-id="${task.id}">
-          <div class="priority-indicator priority-${task.priority}"></div>
+          <div class="priority-indicator priority-${task.priority}">
+            ${difficultyIndicator}
+          </div>
           
           <div class="task-content">
-            <div class="task-title">${task.title}</div>
+            <div class="task-title">${task.title} ${recurringIcon}</div>
             <div class="task-details">${categoryName} • ${dueText}</div>
             ${progressBar}
           </div>
@@ -197,6 +210,7 @@ class TasksView {
       `;
     }
     
+    // TODO: Refactor getRelativeDueDate to a shared utility function
     getRelativeDueDate(dueDate, dueTime) {
       if (!dueDate) {
         return 'No due date';
@@ -331,10 +345,12 @@ class TasksView {
         // Refresh the task list
         await this.refreshTaskList();
         
+        console.log(`TasksView: Task ${newTask.id} created via direct method. UI should ideally highlight this new task.`);
         return newTask;
       } catch (error) {
         console.error('Error creating task:', error);
-        alert('Failed to create task: ' + error.message);
+        // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Error message', 'error'))
+        // alert('Failed to create task: ' + error.message);
       }
     }
   }

@@ -9,7 +9,15 @@ class AchievementsView {
     
     async render() {
       // Load achievements and user profile
-      await this.loadData();
+      const loadSuccess = await this.loadData(); // loadData should return true on success, false on error
+
+      if (!loadSuccess && (!this.achievements || this.achievements.length === 0) && !this.userProfile) {
+        return `
+        <div class="achievements-view">
+          <p class="error-message">Could not load achievement data. Please try again later.</p>
+        </div>
+        `;
+      }
       
       return `
         <div class="achievements-view">
@@ -29,7 +37,7 @@ class AchievementsView {
               
               <div class="points-info">
                 <div class="total-points">${this.userProfile?.total_points || 0} total points</div>
-                <div class="next-level">Next level: ${this.getNextLevelXP()} XP</div>
+                <div class="next-level">Next level: ${this.app.gamification ? this.app.gamification.getNextLevelXP() : 'N/A'} XP</div>
               </div>
             </div>
             
@@ -316,36 +324,89 @@ class AchievementsView {
       
       return totalExp - prevLevelExp;
     }
+
+    // Helper function to get the total XP required to reach a specific level
+    _getXPForLevelThreshold(level) {
+      if (level <= 1) return 0;
+      // This logic should mirror GamificationSystem.calculateLevel's inverse or GamificationSystem.getNextLevelXP's base
+      // It's the XP needed to *reach* this level.
+      // Example: Level 2 needs 100XP total. Level 1 needs 0XP total.
+      // The formula in GamificationSystem's calculateLevel is:
+      // Lvl 1-10: XP = 100 * Lvl^2 (This seems to be threshold TO REACH Lvl+1, or current total XP for current level)
+      // GamificationSystem.getNextLevelXP() actually calculates threshold for (Lvl+1)
+      // Let's use the logic from GamificationSystem.getNextLevelXP() for consistency for specific level thresholds.
+      // This is the XP needed to *reach* 'level'.
+      if (level <= 10) {
+        return 100 * Math.pow(level, 2);
+      } else if (level <= 25) {
+        // XP to reach level 11 is 150 * 11^2, but level 10 was 100*10^2. The curve definition is a bit tricky.
+        // Let's assume the GamificationSystem.getNextLevelXP() gives the threshold for level L+1.
+        // So, XP for current level L's threshold is what GamificationSystem.getNextLevelXP() would give for L-1.
+        // For level L, the XP threshold is based on (L-1) using the getNextLevelXP logic for L.
+        // This means, if we are at level L, the XP accumulated to *start* this level L is calculated based on L.
+        // This is confusing. Let's use GamificationSystem's definition:
+        // getLevelProgress currentLevelXP is calculated using L (currentLevel).
+        // Let's define it as: XP needed to start 'level'.
+        // Level 1 starts at 0 XP.
+        // Level 2 starts at 100 * 1^2 = 100 XP (from GamificationSystem.userProfile.level = 1, getNextLevelXP() = 100 * 2^2 = 400, currentLevelXP = 100 * 1^2 = 100)
+        // No, this is simpler: use the formula for XP required FOR that level.
+        // XP to START level L:
+        if (level <= 1) return 0; // XP to start level 1 is 0
+        // XP to START level L (L > 1) is the threshold of level L.
+        // GamificationSystem.getNextLevelXP() calculates XP for (currentLevel + 1).
+        // So, XP for currentLevel is GamificationSystem.calculateLevel's inverse.
+        // Let's adopt the formulas from GamificationSystem.calculateLevel (inverse logic)
+        // For level L, the total XP accumulated to reach this level is:
+        // For level L, the threshold is based on (L-1) in the GamificationSystem.getNextLevelXP logic for L.
+        // The XP threshold for Level L is:
+        // if L-1 < 10 (i.e. L < 11): 100 * (L-1)^2
+        // if L-1 < 25 (i.e. L < 26): 150 * (L-1)^2
+        // if L-1 < 50 (i.e. L < 51): 200 * (L-1)^2
+        // else: 250 * (L-1)^2
+
+        // This is the XP needed to START level `level`.
+        const effectiveLevelForCalc = level -1; // XP needed to complete level `effectiveLevelForCalc`
+        if (effectiveLevelForCalc === 0) return 0; // Start of level 1
+
+        if (effectiveLevelForCalc < 10) {
+            return 100 * Math.pow(effectiveLevelForCalc, 2);
+        } else if (effectiveLevelForCalc < 25) {
+            // This needs to account for the previous tiers' total
+            // XP for level 10: 100 * 9^2 = 8100 (to start L10)
+            // XP for level 10 by old formula: 100 * 10^2 = 10000 (to start L11)
+            // The formulas in gamification system define the total XP for THAT level.
+            // So getNextLevelXP() in gamification system is actually XP for (currentLevel+1)
+            // And currentLevelXP for getLevelProgress is XP for currentLevel.
+            // So _getXPForLevelThreshold(level) should be total XP to *be* at 'level'.
+            if (level <= 10) return 100 * Math.pow(level, 2); // Total XP to be at level 'level'
+            if (level <= 25) return 150 * Math.pow(level, 2);
+            if (level <= 50) return 200 * Math.pow(level, 2);
+            return 250 * Math.pow(level, 2);
+        }
+        // This seems to be the definition from `GamificationSystem.getNextLevelXP`'s `currentLevelExp`
+        // and `AchievementsView.getCurrentLevelExp`'s `prevLevelExp`.
+        // It's the XP required to *start* the given level.
+        let prevLevel = level -1;
+        if (prevLevel <= 0) return 0;
+
+        if (prevLevel < 10) return 100 * Math.pow(prevLevel, 2);
+        if (prevLevel < 25) return 150 * Math.pow(prevLevel, 2);
+        if (prevLevel < 50) return 200 * Math.pow(prevLevel, 2);
+        return 250 * Math.pow(prevLevel, 2);
+    }
     
-    getNextLevelXP() {
-      if (!this.app.gamification || !this.userProfile) return 100;
+    getNextLevelXP() { // This method in AchievementsView calculates the SPAN of XP for the current level
+      if (!this.app.gamification || !this.userProfile) return 100; // Default span if no data
       
       const currentLevel = this.userProfile.level;
-      let currentLevelExp;
       
-      if (currentLevel < 10) {
-        currentLevelExp = 100 * Math.pow(currentLevel, 2);
-      } else if (currentLevel < 25) {
-        currentLevelExp = 150 * Math.pow(currentLevel, 2);
-      } else if (currentLevel < 50) {
-        currentLevelExp = 200 * Math.pow(currentLevel, 2);
-      } else {
-        currentLevelExp = 250 * Math.pow(currentLevel, 2);
-      }
+      // XP threshold to START currentLevel
+      const currentLevelStartXP = this._getXPForLevelThreshold(currentLevel);
+      // XP threshold to START nextLevel
+      const nextLevelStartXP = this._getXPForLevelThreshold(currentLevel + 1);
       
-      let nextLevelExp;
-      
-      if (currentLevel + 1 <= 10) {
-        nextLevelExp = 100 * Math.pow(currentLevel + 1, 2);
-      } else if (currentLevel + 1 <= 25) {
-        nextLevelExp = 150 * Math.pow(currentLevel + 1, 2);
-      } else if (currentLevel + 1 <= 50) {
-        nextLevelExp = 200 * Math.pow(currentLevel + 1, 2);
-      } else {
-        nextLevelExp = 250 * Math.pow(currentLevel + 1, 2);
-      }
-      
-      return nextLevelExp - currentLevelExp;
+      const span = nextLevelStartXP - currentLevelStartXP;
+      return span > 0 ? span : 100; // Return calculated span, or default if something is off
     }
   }
   

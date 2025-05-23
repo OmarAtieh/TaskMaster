@@ -121,7 +121,6 @@ class DailyMissionManager {
         };
         
         // Save to storage
-        await this.saveDaily
         await this.storage.set('daily_missions', this.dailyMissions);
         
         return this.dailyMissions;

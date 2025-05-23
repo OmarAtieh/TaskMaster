@@ -138,6 +138,10 @@ class SettingsView {
                     Sync Now
                   </button>
                 </div>
+                <div class="setting-row auth-buttons">
+                  <button id="sign-out-button" class="secondary-button" ${!isGoogleAuthorized ? 'style="display:none;"' : ''}>Sign Out from Google</button>
+                  <button id="sign-in-button" class="primary-button" ${isGoogleAuthorized ? 'style="display:none;"' : ''}>Sign In with Google</button>
+                </div>
               </div>
               
               <div class="setting-item">
@@ -294,9 +298,11 @@ class SettingsView {
       document.getElementById('sync-now-button')?.addEventListener('click', () => {
         if (this.app.online) {
           this.app.sync.syncNow();
-          alert('Synchronization started');
+          // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Synchronization started', 'info'))
+          // alert('Synchronization started');
         } else {
-          alert('Cannot sync while offline. Please check your internet connection.');
+          // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Cannot sync while offline. Please check your internet connection.', 'warning'))
+          // alert('Cannot sync while offline. Please check your internet connection.');
         }
       });
       
@@ -306,12 +312,15 @@ class SettingsView {
         if (sheetIdInput) {
           sheetIdInput.select();
           document.execCommand('copy');
-          alert('Sheet ID copied to clipboard!');
+          // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Sheet ID copied to clipboard!', 'success'))
+          // alert('Sheet ID copied to clipboard!');
         }
       });
       
       // Reset app button
       document.getElementById('reset-app')?.addEventListener('click', () => {
+        // The confirm dialog is a blocking operation, which is acceptable for such a destructive action.
+        // We might replace it with a custom modal in the future for better UX, but for now, it's fine.
         if (confirm('WARNING: This will reset the entire application and delete all your data. This action cannot be undone. Are you absolutely sure?')) {
           this.resetApplication();
         }
@@ -385,6 +394,61 @@ class SettingsView {
     });
       // Calculate storage usage
       this.calculateStorageUsage();
+
+      // Sign Out button
+      document.getElementById('sign-out-button')?.addEventListener('click', async () => {
+        try {
+          await this.app.sync.signOut();
+          // TODO: Show non-blocking notification for sign-out success/failure (e.g., this.app.ui.showNotification('Signed out successfully.', 'success'))
+          await this.refreshView();
+        } catch (error) {
+          console.error('Error during sign out:', error);
+          // TODO: Show non-blocking notification for sign-out success/failure (e.g., this.app.ui.showNotification('Sign out failed.', 'error'))
+        }
+      });
+
+      // Sign In button
+      document.getElementById('sign-in-button')?.addEventListener('click', async () => {
+        try {
+          // TODO: Show non-blocking notification for sign-in attempt/redirect (e.g., this.app.ui.showNotification('Redirecting to Google for sign-in...', 'info'))
+          await this.app.sync.authorize();
+          // If authorize() doesn't always redirect or for future proofing:
+          // await this.refreshView(); 
+        } catch (error) {
+          console.error('Error during sign in:', error);
+          // TODO: Show non-blocking notification for sign-in attempt/redirect (e.g., this.app.ui.showNotification('Sign in failed.', 'error'))
+        }
+      });
+    }
+
+    async refreshView() {
+      const viewContainer = document.querySelector('.settings-view'); // Or specific container if settings view is nested
+      if (viewContainer) {
+        // If settings-view is the top-level container rendered by UIManager for this view
+        if (this.app.ui.currentView === 'settings') { // Check if settings is the active view
+            const mainContent = document.getElementById('view-container'); // Assuming 'view-container' is UIManager's target
+            if (mainContent) {
+                mainContent.innerHTML = await this.render();
+            } else {
+                 // Fallback if view-container is not found, directly update .settings-view's parent or self.
+                 // This depends on how UIManager renders views. For simplicity, let's assume settings-view is the root.
+                if (viewContainer.parentElement && viewContainer.parentElement.id === 'view-container') {
+                    viewContainer.parentElement.innerHTML = await this.render();
+                } else { // If settings-view is the direct child of view-container or structure is different
+                    viewContainer.innerHTML = await this.render(); // This might cause nested settings-view if not handled carefully
+                }
+            }
+        }
+      } else {
+          // If the primary container isn't found, attempt to re-render through UIManager if possible
+          // This path is less ideal as it implies the view structure is not as expected.
+          console.warn('Settings view container not found, attempting full UIManager view switch.');
+          if (this.app.ui && this.app.ui.switchView) {
+            this.app.ui.switchView('settings'); // This will re-render and re-initialize
+            return; // switchView usually handles re-initialization.
+          }
+      }
+      this.initializeEventListeners(); // Re-attach listeners to the new DOM
     }
     
     async calculateStorageUsage() {
@@ -591,13 +655,15 @@ class SettingsView {
         // (We don't clear google_client_id and google_api_key)
         
         // 6. Show success message
-        alert('All data has been successfully cleared.');
+        // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('All data has been successfully cleared.', 'success'))
+        // alert('All data has been successfully cleared.');
         
         // 7. Reload the application (like a fresh start)
         window.location.reload();
         } catch (error) {
         console.error('Error clearing data:', error);
-        alert('An error occurred while clearing data: ' + error.message);
+        // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('An error occurred while clearing data: ' + error.message, 'error'))
+        // alert('An error occurred while clearing data: ' + error.message);
         }
     }
     
@@ -639,13 +705,15 @@ class SettingsView {
         await this.app.storage.delete('app_initialized', 'user_data');
         
         // Show success message
-        alert('Application reset successful. The page will now reload.');
+        // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Application reset successful. The page will now reload.', 'success'))
+        // alert('Application reset successful. The page will now reload.');
         
         // Reload the page
         window.location.reload();
       } catch (error) {
         console.error('Error resetting application:', error);
-        alert('Failed to reset application: ' + error.message);
+        // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Failed to reset application: ' + error.message, 'error'))
+        // alert('Failed to reset application: ' + error.message);
       }
     }
   }
