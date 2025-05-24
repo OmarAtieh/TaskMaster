@@ -214,7 +214,12 @@ async loadGoogleApi() {
 
         if (!this.CLIENT_ID || this.CLIENT_ID.trim() === "" || !this.API_KEY || this.API_KEY.trim() === "") {
             console.error("Google Client ID or API Key is missing. Prompting user for input.");
-            this.app.showCredentialEntryScreen();
+            if (this.app.ui && this.app.ui.showCredentialEntryScreen) {
+                this.app.ui.showCredentialEntryScreen();
+            } else {
+                console.error("UIManager showCredentialEntryScreen method not available.");
+                // Fallback or generic error display if UI method is missing
+            }
             return { success: false, reason: "missing_credentials", message: "Google API credentials are required." };
         }
 
@@ -258,7 +263,11 @@ async loadGoogleApi() {
       localStorage.removeItem("oauth_token_expiry");
 
       // Redirect back to credential entry or reattempt authentication
-      this.app.showCredentialEntryScreen();
+      if (this.app.ui && this.app.ui.showCredentialEntryScreen) {
+          this.app.ui.showCredentialEntryScreen();
+      } else {
+          console.error("UIManager showCredentialEntryScreen method not available for retry.");
+      }
   }
 
 
@@ -357,38 +366,10 @@ async loadGoogleApi() {
           title: this.app.config.gSheetName || 'TaskMaster-Data'
         },
         sheets: [
-          {
-            properties: {
-              title: 'Tasks',
-              gridProperties: {
-                frozenRowCount: 1
-              }
-            }
-          },
-          {
-            properties: {
-              title: 'Categories',
-              gridProperties: {
-                frozenRowCount: 1
-              }
-            }
-          },
-          {
-            properties: {
-              title: 'UserProfile',
-              gridProperties: {
-                frozenRowCount: 1
-              }
-            }
-          },
-          {
-            properties: {
-              title: 'Settings',
-              gridProperties: {
-                frozenRowCount: 1
-              }
-            }
-          }
+          { properties: { title: 'Tasks', gridProperties: { frozenRowCount: 1 } } },
+          { properties: { title: 'Categories', gridProperties: { frozenRowCount: 1 } } },
+          { properties: { title: 'UserProfile', gridProperties: { frozenRowCount: 1 } } },
+          { properties: { title: 'Settings', gridProperties: { frozenRowCount: 1 } } }
         ]
       });
       
@@ -397,20 +378,33 @@ async loadGoogleApi() {
       }
       
       this.spreadsheetId = response.result.spreadsheetId;
-      
-      // Save the spreadsheet ID
       await this.storage.set('spreadsheet_id', this.spreadsheetId);
-      
-      // Initialize the sheet structure
-      await this.initializeSheetHeaders();
+      await this.initializeSheetHeaders(); // This also needs error handling
       
       console.log('Created new spreadsheet with ID:', this.spreadsheetId);
       return this.spreadsheetId;
     } catch (error) {
       console.error('Error creating spreadsheet:', error);
-      const errorMessage = error.result ? 
-                           JSON.stringify(error.result) : 
-                           (error.message || 'Unknown error');
+      if (error.status === 401 || (error.result && error.result.error && error.result.error.code === 401)) {
+        this.isAuthorized = false;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken(null);
+        }
+        const authErrorMessage = 'Authentication error. Please sign out and sign back in.';
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification(authErrorMessage, 'error', 7000);
+        } else {
+            // console.error(authErrorMessage); // Fallback already handled by throwing error
+        }
+        console.log('Authentication error detected in createNewSpreadsheet. User needs to re-authenticate.');
+        throw new Error('AuthError: Please re-authenticate.');
+      }
+      const errorMessage = error.result ? JSON.stringify(error.result.error) : (error.message || 'Unknown error');
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Failed to create spreadsheet: ' + errorMessage, 'error', 5000);
+      } else {
+        // console.error('Failed to create spreadsheet: ' + errorMessage); // Fallback already handled by throwing error
+      }
       throw new Error('Failed to create spreadsheet: ' + errorMessage);
     }
   }
@@ -436,19 +430,20 @@ async loadGoogleApi() {
     };
     
     // Write headers to each sheet
-    for (const [sheetName, headers] of Object.entries(headerValues)) {
-      await this.gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: this.spreadsheetId,
-        range: `${sheetName}!A1:Z1`,
-        valueInputOption: 'RAW',
-        resource: {
-          values: headers
-        }
-      });
-    }
-    
-    // Format headers (make bold and freeze)
-    const requests = Object.keys(headerValues).map(sheetName => {
+    try {
+      for (const [sheetName, headers] of Object.entries(headerValues)) {
+        await this.gapi.client.sheets.spreadsheets.values.update({
+          spreadsheetId: this.spreadsheetId,
+          range: `${sheetName}!A1:Z1`,
+          valueInputOption: 'RAW',
+          resource: {
+            values: headers
+          }
+        });
+      }
+      
+      // Format headers (make bold and freeze)
+      const requests = Object.keys(headerValues).map(sheetName => {
       return {
         repeatCell: {
           range: {
@@ -473,12 +468,36 @@ async loadGoogleApi() {
       };
     });
     
-    await this.gapi.client.sheets.spreadsheets.batchUpdate({
-      spreadsheetId: this.spreadsheetId,
-      resource: {
-        requests: requests
+      await this.gapi.client.sheets.spreadsheets.batchUpdate({
+        spreadsheetId: this.spreadsheetId,
+        resource: {
+          requests: requests
+        }
+      });
+    } catch (error) {
+      console.error('Error initializing sheet headers:', error);
+      if (error.status === 401 || (error.result && error.result.error && error.result.error.code === 401)) {
+        this.isAuthorized = false;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken(null);
+        }
+        const authErrorMessage = 'Authentication error during sheet header initialization. Please sign out and sign back in.';
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification(authErrorMessage, 'error', 7000);
+        } else {
+            // console.error(authErrorMessage);
+        }
+        console.log('Authentication error detected in initializeSheetHeaders. User needs to re-authenticate.');
+        throw new Error('AuthError: Please re-authenticate.');
       }
-    });
+      const errorMessage = error.result ? JSON.stringify(error.result.error) : (error.message || 'Unknown error');
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Failed to initialize sheet headers: ' + errorMessage, 'error', 5000);
+      } else {
+        // console.error('Failed to initialize sheet headers: ' + errorMessage);
+      }
+      throw new Error('Failed to initialize sheet headers: ' + errorMessage);
+    }
   }
   
   // Get sheet ID by name
@@ -501,7 +520,7 @@ async loadGoogleApi() {
     // In a more complete implementation, we'd also validate columns
     
     try {
-      const response = await this.gapi.client.sheets.spreadsheets.get({
+      const response = await this.gapi.client.sheets.spreadsheets.get({ // API Call
         spreadsheetId: this.spreadsheetId
       });
       
@@ -528,7 +547,7 @@ async loadGoogleApi() {
           };
         });
         
-        await this.gapi.client.sheets.spreadsheets.batchUpdate({
+        await this.gapi.client.sheets.spreadsheets.batchUpdate({ // API Call
           spreadsheetId: this.spreadsheetId,
           resource: {
             requests: requests
@@ -536,13 +555,33 @@ async loadGoogleApi() {
         });
         
         // Initialize headers for new sheets
-        await this.initializeSheetHeaders();
+        await this.initializeSheetHeaders(); // This has its own try-catch
       }
       
       return true;
     } catch (error) {
       console.error('Error ensuring sheet structure:', error);
-      throw new Error('Failed to validate sheet structure: ' + error.message);
+      if (error.status === 401 || (error.result && error.result.error && error.result.error.code === 401)) {
+        this.isAuthorized = false;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken(null);
+        }
+        const authErrorMessage = 'Authentication error during sheet structure validation. Please sign out and sign back in.';
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification(authErrorMessage, 'error', 7000);
+        } else {
+            // console.error(authErrorMessage);
+        }
+        console.log('Authentication error detected in ensureSheetStructure. User needs to re-authenticate.');
+        throw new Error('AuthError: Please re-authenticate.');
+      }
+      const errorMessage = error.result ? JSON.stringify(error.result.error) : (error.message || 'Unknown error');
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Failed to validate sheet structure: ' + errorMessage, 'error', 5000);
+      } else {
+        // console.error('Failed to validate sheet structure: ' + errorMessage);
+      }
+      throw new Error('Failed to validate sheet structure: ' + errorMessage);
     }
   }
   
@@ -584,10 +623,17 @@ async loadGoogleApi() {
   // Perform immediate synchronization
   async syncNow() {
     if (!this.isAuthorized || !this.spreadsheetId) {
-      throw new Error('Not authorized or no spreadsheet ID');
+      const errorMsg = 'Sync failed: Not authorized or no spreadsheet ID.';
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification(errorMsg, 'error', 5000);
+      }
+      throw new Error(errorMsg);
     }
     
     try {
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Synchronization started...', 'info', 2000);
+      }
       // Sync tasks
       await this.syncTasks();
       
@@ -600,10 +646,19 @@ async loadGoogleApi() {
       // Sync settings
       await this.syncSettings();
       
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Synchronization complete!', 'success', 3000);
+      }
       console.log('Sync completed successfully');
       return true;
     } catch (error) {
       console.error('Sync failed:', error);
+      if (this.app && this.app.notificationUI) {
+        // AuthError would have already shown a specific message if it was an auth issue from sub-methods
+        if (!error.message.startsWith('AuthError:')) {
+          this.app.notificationUI.showNotification('Synchronization failed: ' + error.message, 'error', 5000);
+        }
+      }
       throw new Error('Synchronization failed: ' + error.message);
     }
   }
@@ -650,30 +705,55 @@ async loadGoogleApi() {
     });
     
     // Get existing rows
-    const response = await this.gapi.client.sheets.spreadsheets.values.get({
-      spreadsheetId: this.spreadsheetId,
-      range: 'Tasks!A2:Z'
-    });
-    
-    const existingData = response.result.values || [];
-    
-    // Clear all data except headers
-    await this.gapi.client.sheets.spreadsheets.values.clear({
-      spreadsheetId: this.spreadsheetId,
-      range: 'Tasks!A2:Z'
-    });
-    
-    // Write all task data
-    await this.gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: this.spreadsheetId,
-      range: 'Tasks!A2',
-      valueInputOption: 'RAW',
-      resource: {
-        values: rows
+    try {
+      const response = await this.gapi.client.sheets.spreadsheets.values.get({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'Tasks!A2:Z'
+      });
+      
+      const existingData = response.result.values || [];
+      
+      // Clear all data except headers
+      await this.gapi.client.sheets.spreadsheets.values.clear({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'Tasks!A2:Z'
+      });
+      
+      // Write all task data
+      await this.gapi.client.sheets.spreadsheets.values.update({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'Tasks!A2',
+        valueInputOption: 'RAW',
+        resource: {
+          values: rows
+        }
+      });
+      
+      console.log(`Synced ${rows.length} tasks`);
+    } catch (error) {
+      console.error('Error syncing tasks:', error);
+      if (error.status === 401 || (error.result && error.result.error && error.result.error.code === 401)) {
+        this.isAuthorized = false;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken(null);
+        }
+        const authErrorMessage = 'Authentication error during task sync. Please sign out and sign back in.';
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification(authErrorMessage, 'error', 7000);
+        } else {
+            // console.error(authErrorMessage);
+        }
+        console.log('Authentication error detected in syncTasks. User needs to re-authenticate.');
+        throw new Error('AuthError: Please re-authenticate.');
       }
-    });
-    
-    console.log(`Synced ${rows.length} tasks`);
+      const errorMessage = error.result ? JSON.stringify(error.result.error) : (error.message || 'Unknown error');
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Failed to sync tasks: ' + errorMessage, 'error', 5000);
+      } else {
+        // console.error('Failed to sync tasks: ' + errorMessage);
+      }
+      throw new Error('Failed to sync tasks: ' + errorMessage);
+    }
   }
   
   // Sync categories
@@ -700,22 +780,47 @@ async loadGoogleApi() {
     });
     
     // Clear existing data
-    await this.gapi.client.sheets.spreadsheets.values.clear({
-      spreadsheetId: this.spreadsheetId,
-      range: 'Categories!A2:Z'
-    });
-    
-    // Write category data
-    await this.gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: this.spreadsheetId,
-      range: 'Categories!A2',
-      valueInputOption: 'RAW',
-      resource: {
-        values: rows
+    try {
+      await this.gapi.client.sheets.spreadsheets.values.clear({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'Categories!A2:Z'
+      });
+      
+      // Write category data
+      await this.gapi.client.sheets.spreadsheets.values.update({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'Categories!A2',
+        valueInputOption: 'RAW',
+        resource: {
+          values: rows
+        }
+      });
+      
+      console.log(`Synced ${rows.length} categories`);
+    } catch (error) {
+      console.error('Error syncing categories:', error);
+      if (error.status === 401 || (error.result && error.result.error && error.result.error.code === 401)) {
+        this.isAuthorized = false;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken(null);
+        }
+        const authErrorMessage = 'Authentication error during category sync. Please sign out and sign back in.';
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification(authErrorMessage, 'error', 7000);
+        } else {
+            // console.error(authErrorMessage);
+        }
+        console.log('Authentication error detected in syncCategories. User needs to re-authenticate.');
+        throw new Error('AuthError: Please re-authenticate.');
       }
-    });
-    
-    console.log(`Synced ${rows.length} categories`);
+      const errorMessage = error.result ? JSON.stringify(error.result.error) : (error.message || 'Unknown error');
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Failed to sync categories: ' + errorMessage, 'error', 5000);
+      } else {
+        // console.error('Failed to sync categories: ' + errorMessage);
+      }
+      throw new Error('Failed to sync categories: ' + errorMessage);
+    }
   }
   
   // Sync user profile
@@ -733,22 +838,47 @@ async loadGoogleApi() {
     });
     
     // Clear existing data
-    await this.gapi.client.sheets.spreadsheets.values.clear({
-      spreadsheetId: this.spreadsheetId,
-      range: 'UserProfile!A2:Z'
-    });
-    
-    // Write profile data
-    await this.gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: this.spreadsheetId,
-      range: 'UserProfile!A2',
-      valueInputOption: 'RAW',
-      resource: {
-        values: rows
+    try {
+      await this.gapi.client.sheets.spreadsheets.values.clear({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'UserProfile!A2:Z'
+      });
+      
+      // Write profile data
+      await this.gapi.client.sheets.spreadsheets.values.update({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'UserProfile!A2',
+        valueInputOption: 'RAW',
+        resource: {
+          values: rows
+        }
+      });
+      
+      console.log('Synced user profile');
+    } catch (error) {
+      console.error('Error syncing user profile:', error);
+      if (error.status === 401 || (error.result && error.result.error && error.result.error.code === 401)) {
+        this.isAuthorized = false;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken(null);
+        }
+        const authErrorMessage = 'Authentication error during user profile sync. Please sign out and sign back in.';
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification(authErrorMessage, 'error', 7000);
+        } else {
+            // console.error(authErrorMessage);
+        }
+        console.log('Authentication error detected in syncUserProfile. User needs to re-authenticate.');
+        throw new Error('AuthError: Please re-authenticate.');
       }
-    });
-    
-    console.log('Synced user profile');
+      const errorMessage = error.result ? JSON.stringify(error.result.error) : (error.message || 'Unknown error');
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Failed to sync user profile: ' + errorMessage, 'error', 5000);
+      } else {
+        // console.error('Failed to sync user profile: ' + errorMessage);
+      }
+      throw new Error('Failed to sync user profile: ' + errorMessage);
+    }
   }
   
   // Sync settings
@@ -761,22 +891,97 @@ async loadGoogleApi() {
     });
     
     // Clear existing data
-    await this.gapi.client.sheets.spreadsheets.values.clear({
-      spreadsheetId: this.spreadsheetId,
-      range: 'Settings!A2:Z'
-    });
-    
-    // Write settings data
-    await this.gapi.client.sheets.spreadsheets.values.update({
-      spreadsheetId: this.spreadsheetId,
-      range: 'Settings!A2',
-      valueInputOption: 'RAW',
-      resource: {
-        values: rows
+    try {
+      await this.gapi.client.sheets.spreadsheets.values.clear({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'Settings!A2:Z'
+      });
+      
+      // Write settings data
+      await this.gapi.client.sheets.spreadsheets.values.update({ // API Call
+        spreadsheetId: this.spreadsheetId,
+        range: 'Settings!A2',
+        valueInputOption: 'RAW',
+        resource: {
+          values: rows
+        }
+      });
+      
+      console.log('Synced settings');
+    } catch (error) {
+      console.error('Error syncing settings:', error);
+      if (error.status === 401 || (error.result && error.result.error && error.result.error.code === 401)) {
+        this.isAuthorized = false;
+        if (this.gapi && this.gapi.client) {
+          this.gapi.client.setToken(null);
+        }
+        const authErrorMessage = 'Authentication error during settings sync. Please sign out and sign back in.';
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification(authErrorMessage, 'error', 7000);
+        } else {
+            // console.error(authErrorMessage);
+        }
+        console.log('Authentication error detected in syncSettings. User needs to re-authenticate.');
+        throw new Error('AuthError: Please re-authenticate.');
       }
-    });
+      const errorMessage = error.result ? JSON.stringify(error.result.error) : (error.message || 'Unknown error');
+      if (this.app && this.app.notificationUI) {
+        this.app.notificationUI.showNotification('Failed to sync settings: ' + errorMessage, 'error', 5000);
+      } else {
+        // console.error('Failed to sync settings: ' + errorMessage);
+      }
+      throw new Error('Failed to sync settings: ' + errorMessage);
+    }
+  }
+
+  async signOut() {
+    console.log('Attempting to sign out...');
+    if (this.isAuthorized && this.gapi && window.google && window.google.accounts && window.google.accounts.oauth2) {
+      const token = this.gapi.client.getToken();
+      if (token && token.access_token) {
+        try {
+          // Revoke the token
+          await new Promise((resolve, reject) => {
+            window.google.accounts.oauth2.revoke(token.access_token, (done) => {
+              if (done.successful) {
+                console.log('Access token revoked successfully.');
+                resolve();
+              } else {
+                console.warn('Failed to revoke access token. Error:', done.error);
+                // Even if revocation fails, proceed with local sign-out
+                resolve(); // Resolve to not block sign-out flow
+              }
+            });
+          });
+        } catch (e) {
+          console.error('Error during token revocation:', e);
+        }
+      }
+    }
+
+    if (this.gapi && this.gapi.client) {
+      this.gapi.client.setToken(null);
+    }
+    this.isAuthorized = false;
+
+    // Optionally clear related stored data
+    try {
+      await this.storage.remove('spreadsheet_id');
+      this.spreadsheetId = null;
+      await this.storage.remove('auto_login'); // If you have an auto-login flag
+      console.log('Spreadsheet ID and auto-login flag cleared from storage.');
+    } catch (error) {
+      console.error('Error clearing stored data during sign out:', error);
+    }
     
-    console.log('Synced settings');
+    console.log('User signed out locally. Token cleared, authorization status reset.');
+    // The UI should then be updated, e.g., show login screen
+    if (this.app && this.app.ui && this.app.ui.showAuthPrompt) { // Or showLoginScreen / showCredentialEntryScreen
+        // This depends on how your app handles the UI transition to a signed-out state.
+        // For example, it might reload the page or show a specific login UI.
+        // this.app.ui.showAuthPrompt(); // Or equivalent to show login screen
+        console.log('UI should be updated to reflect signed-out state.');
+    }
   }
 }
 

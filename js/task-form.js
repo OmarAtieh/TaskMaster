@@ -44,7 +44,11 @@ class TaskForm {
         this.showForm(task);
       } catch (error) {
         console.error('Error loading task for edit:', error);
-        alert('Could not load task: ' + error.message);
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Could not load task: ' + error.message, 'error', 5000);
+        } else {
+            alert('Could not load task: ' + error.message); // Fallback if notificationUI is not available
+        }
       }
     }
     
@@ -89,7 +93,11 @@ class TaskForm {
           this.initializeDetailsControls(task);
         } catch (error) {
           console.error('Error loading task details:', error);
-          alert('Could not load task details: ' + error.message);
+          if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Could not load task details: ' + error.message, 'error', 5000);
+          } else {
+            alert('Could not load task details: ' + error.message); // Fallback
+          }
         }
       }
       
@@ -323,7 +331,11 @@ class TaskForm {
             }
             } catch (error) {
             console.error('Error completing task:', error);
-            alert('Error completing task: ' + error.message);
+            if (this.app && this.app.notificationUI) {
+                this.app.notificationUI.showNotification('Error completing task: ' + error.message, 'error', 5000);
+            } else {
+                alert('Error completing task: ' + error.message); // Fallback
+            }
             }
         });
         }
@@ -361,7 +373,11 @@ class TaskForm {
           }
         } catch (error) {
           console.error('Error deleting task:', error);
-          alert('Error deleting task: ' + error.message);
+          if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Error deleting task: ' + error.message, 'error', 5000);
+          } else {
+            alert('Error deleting task: ' + error.message); // Fallback
+          }
         }
       }
       
@@ -657,7 +673,11 @@ class TaskForm {
         
         // Validate required fields
         if (!formData.title.trim()) {
-          alert('Please enter a task title');
+          if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Please enter a task title.', 'warning', 3000);
+          } else {
+            alert('Please enter a task title.'); // Fallback
+          }
           return;
         }
         
@@ -695,11 +715,21 @@ class TaskForm {
         if (this.app.sound && this.app.preferences.soundEnabled) {
           this.app.sound.play('click');
         }
+
+        if (this.isEdit) {
+          console.log(`TaskForm: Task ${task.id} updated. UI should ideally highlight this task.`);
+        } else {
+          console.log(`TaskForm: Task ${task.id} created. UI should ideally highlight this new task.`);
+        }
         
         return task;
       } catch (error) {
         console.error('Error saving task:', error);
-        alert('Error saving task: ' + error.message);
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Error saving task: ' + error.message, 'error', 5000);
+        } else {
+            alert('Error saving task: ' + error.message); // Fallback
+        }
       }
     }
     

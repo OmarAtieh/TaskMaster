@@ -15,7 +15,15 @@ class ProgressView {
     
     async render() {
       // Load data
-      await this.loadData();
+      const loadSuccess = await this.loadData();
+
+      if (!loadSuccess && (!this.tasks || this.tasks.length === 0) && !this.dailyMissions) {
+        return `
+        <div class="progress-view">
+          <p class="error-message">Could not load progress data. Please try again later.</p>
+        </div>
+        `;
+      }
       
       return `
         <div class="progress-view">
@@ -512,6 +520,9 @@ class ProgressView {
         }, 500);
       } catch (error) {
         console.error('Error completing task:', error);
+        if (this.app && this.app.notificationUI) {
+          this.app.notificationUI.showNotification('Error completing task: ' + error.message, 'error', 5000);
+        }
       }
     }
     
@@ -542,6 +553,7 @@ class ProgressView {
       }
     }
     
+    // TODO: Refactor getRelativeDueDate to a shared utility function
     getRelativeDueDate(dueDate, dueTime) {
       if (!dueDate) {
         return 'No due date';

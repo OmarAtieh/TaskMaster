@@ -82,6 +82,35 @@ class DailyView {
     async loadDailyMissions() {
       try {
         this.dailyMissions = await this.app.dailyMissions.checkAndGenerateDailyMissions();
+
+        if (this.dailyMissions && this.dailyMissions.missions) {
+          let allMissionsNowCompleted = true;
+          for (const mission of this.dailyMissions.missions) {
+            try {
+              const task = await this.app.tasks.getTask(mission.id);
+              if (task) {
+                mission.completed = (task.status === 'completed');
+              } else {
+                // Task associated with mission not found, treat as not completed or handle as error
+                mission.completed = false; 
+                console.warn(`Task ID ${mission.id} for daily mission not found.`);
+              }
+            } catch (taskError) {
+              console.error(`Error fetching task ${mission.id} for daily mission sync:`, taskError);
+              mission.completed = false; // Assume not completed on error
+            }
+            if (!mission.completed) {
+              allMissionsNowCompleted = false;
+            }
+          }
+          this.dailyMissions.allCompleted = allMissionsNowCompleted;
+          
+          // Optional: Persist these refreshed statuses.
+          // For now, this is a view-level refresh. If persistence is needed:
+          // await this.app.dailyMissions.storage.set('daily_missions', this.dailyMissions);
+          // Or a dedicated method in DailyMissionManager to update statuses without awarding points again.
+          console.log('Daily missions status synced with current task statuses.');
+        }
         return this.dailyMissions;
       } catch (error) {
         console.error('Error loading daily missions:', error);
@@ -170,12 +199,20 @@ class DailyView {
           }
           
           // Show congratulations message
-          alert('Congratulations! You completed all daily missions and earned a bonus of ' + 
-                this.dailyMissions.bonus + ' points!');
+          if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Congratulations! You completed all daily missions and earned a bonus of ' + this.dailyMissions.bonus + ' points!', 'success', 5000);
+          } else {
+            alert('Congratulations! You completed all daily missions and earned a bonus of ' + 
+                  this.dailyMissions.bonus + ' points!'); // Fallback
+          }
         }
       } catch (error) {
         console.error('Error toggling mission completion:', error);
-        alert('Error updating mission: ' + error.message);
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Error updating mission: ' + error.message, 'error', 5000);
+        } else {
+            alert('Error updating mission: ' + error.message); // Fallback
+        }
       }
     }
     
@@ -198,7 +235,11 @@ class DailyView {
         }
       } catch (error) {
         console.error('Error regenerating missions:', error);
-        alert('Error regenerating missions: ' + error.message);
+        if (this.app && this.app.notificationUI) {
+            this.app.notificationUI.showNotification('Error regenerating missions: ' + error.message, 'error', 5000);
+        } else {
+            alert('Error regenerating missions: ' + error.message); // Fallback
+        }
       }
     }
     
