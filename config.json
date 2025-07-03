@@ -1,0 +1,26 @@
+{
+    "dev": {
+      "loggingEnabled": true,
+      "apiBaseUrl": "http://localhost:3000",
+      "features": {
+        "experimentalFeature1": true,
+        "experimentalFeature2": false
+      }
+    },
+    "test": {
+      "loggingEnabled": false,
+      "apiBaseUrl": "https://test-api.example.com",
+      "features": {
+        "experimentalFeature1": false,
+        "experimentalFeature2": true
+      }
+    },
+    "prod": {
+      "loggingEnabled": false,
+      "apiBaseUrl": "https://api.example.com",
+      "features": {
+        "experimentalFeature1": false,
+        "experimentalFeature2": false
+      }
+    }
+  }

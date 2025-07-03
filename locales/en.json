@@ -1,0 +1,561 @@
+{
+    "app": {
+      "name": "TaskMaster",
+      "version": "Version: %VERSION%",
+      "description": "A powerful task management application with gamification.",
+      "buildDate": "Build Date: %BUILD_DATE%",
+      "buildNumber": "Build Number: %BUILD_NUMBER%",
+      "copyright": "© %YEAR% TaskMaster"
+    },
+    "onboarding": {
+      "title": "Welcome to TaskMaster!",
+      "steps": [
+        {
+          "id": "personalization",
+          "title": "Personalize Your Experience",
+          "description": "Let's tailor TaskMaster to your preferences.",
+          "fields": [
+            {
+              "type": "select",
+              "label": "Theme:",
+              "id": "theme",
+              "options": {
+                "auto": "Auto (System Default)",
+                "light": "Light",
+                "dark": "Dark"
+              }
+            },
+            {
+              "type": "select",
+              "label": "Achievement Style:",
+              "id": "titleTheme",
+              "options": {
+                "fantasy": "Fantasy Adventure",
+                "professional": "Career Growth",
+                "academic": "Academic Achievement",
+                "athletic": "Athletic Progress",
+                "spiritual": "Spiritual Journey"
+              }
+            },
+            {
+              "type": "checkbox",
+              "label": "Enable notifications for task reminders",
+              "id": "notificationsEnabled",
+              "checked": true
+            },
+            {
+              "type": "checkbox",
+              "label": "Enable sound effects",
+              "id": "soundEnabled",
+              "checked": true
+            }
+          ],
+          "button": "Save Preferences"
+        },
+        {
+          "id": "googleConnect",
+          "title": "Connect to Google",
+          "description": "Authorize TaskMaster to access your Google Sheets.",
+          "button": "Connect with Google",
+          "error": {
+            "title": "Connection Error",
+            "message": "Could not connect to Google. Please check your internet connection and try again."
+          }
+        },
+        {
+          "id": "sheetsSetup",
+          "title": "Setting up Google Sheets",
+          "description": "We're creating a spreadsheet to store your tasks and progress.",
+          "successMessage": "Google Sheets setup complete!",
+          "errorMessage": "Google Sheets setup failed. Please check your API credentials and try again."
+        },
+        {
+          "id": "finalSetup",
+          "title": "Finalizing Setup",
+          "description": "Creating default categories and settings."
+        }
+      ],
+      "complete": {
+        "title": "You're all set!",
+        "description": "TaskMaster is ready to help you be more productive."
+      },
+      "error": {
+        "title": "Oops! Something went wrong",
+        "message": "An unexpected error occurred during setup.",
+        "restartButton": "Restart Setup"
+      }
+    },
+    "ui": {
+      "loadingMessage": "Loading TaskMaster...",
+      "sections": {
+        "tasks": "Tasks",
+        "daily": "Daily",
+        "progress": "Progress",
+        "achievements": "Achievements",
+        "settings": "Settings"
+      },
+      "modals": {
+        "addTask": {
+          "title": "Add Task",
+          "buttons": {
+            "add": "Add Task",
+            "cancel": "Cancel"
+          },
+          "labels": {
+            "title": "Title",
+            "description": "Description",
+            "category": "Category",
+            "subcategory": "Subcategory",
+            "priority": "Priority",
+            "difficulty": "Difficulty",
+            "dueDate": "Due Date",
+            "dueTime": "Due Time",
+            "estimatedTime": "Estimated Time (minutes)",
+            "recurring": "Recurring Task",
+            "notes": "Notes",
+            "tags": "Tags"
+          },
+          "placeholders": {
+            "title": "Enter task title",
+            "description": "Enter task description"
+          },
+          "errors": {
+            "titleRequired": "Please enter a task title",
+            "invalidDate": "Invalid due date",
+            "invalidTime": "Invalid due time",
+            "invalidEstimatedTime": "Invalid estimated time",
+            "invalidRecurrence": "Invalid recurrence pattern"
+          }
+        },
+        "editTask": {
+          "title": "Edit Task",
+          "buttons": {
+            "update": "Update Task",
+            "cancel": "Cancel"
+          }
+        },
+        "deleteTask": {
+          "title": "Delete Task",
+          "message": "Are you sure you want to delete this task? This cannot be undone.",
+          "buttons": {
+            "delete": "Delete",
+            "cancel": "Cancel"
+          }
+        },
+        "viewTask": {
+          "title": "Task Details",
+          "buttons": {
+            "close": "Close",
+            "complete": "Mark Complete",
+            "edit": "Edit Task",
+            "delete": "Delete Task"
+          },
+          "labels": {
+            "status": "Status",
+            "category": "Category",
+            "subcategory": "Subcategory",
+            "dueDate": "Due Date",
+            "dueTime": "Due Time",
+            "estimatedTime": "Estimated Time",
+            "recurring": "Recurring",
+            "created": "Created",
+            "notes": "Notes"
+          }
+        },
+        "addCategory": {
+          "title": "Add Category",
+          "buttons": {
+            "add": "Add Category",
+            "cancel": "Cancel"
+          },
+          "labels": {
+            "name": "Category Name",
+            "color": "Color",
+            "icon": "Icon"
+          },
+          "errors": {
+            "nameRequired": "Please enter a category name"
+          }
+        },
+        "editCategory": {
+          "title": "Edit Category",
+          "buttons": {
+            "update": "Update Category",
+            "cancel": "Cancel"
+          }
+        },
+        "deleteCategory": {
+          "title": "Delete Category",
+          "message": "Are you sure you want to delete this category? This cannot be undone.",
+          "buttons": {
+            "delete": "Delete",
+            "cancel": "Cancel"
+          }
+        },
+        "addSubcategory": {
+          "title": "Add Subcategory",
+          "buttons": {
+            "add": "Add Subcategory",
+            "cancel": "Cancel"
+          },
+          "labels": {
+            "name": "Subcategory Name"
+          },
+          "errors": {
+            "nameRequired": "Please enter a subcategory name"
+          }
+        },
+        "editSubcategory": {
+          "title": "Edit Subcategory",
+          "buttons": {
+            "update": "Update Subcategory",
+            "cancel": "Cancel"
+          }
+        },
+        "deleteSubcategory": {
+          "title": "Delete Subcategory",
+          "message": "Are you sure you want to delete this subcategory? This cannot be undone.",
+          "buttons": {
+            "delete": "Delete",
+            "cancel": "Cancel"
+          }
+        },
+        "settings": {
+          "title": "Settings",
+          "buttons": {
+            "save": "Save Settings",
+            "reset": "Reset Settings to Defaults"
+          },
+          "sections": {
+            "autoLogin": "Auto Login",
+            "dailyReminder": "Daily Reminder",
+            "notifications": "Notifications",
+            "sounds": "Sound Effects",
+            "syncInterval": "Sync Interval",
+            "googleAPIKey": "Google API Key",
+            "googleClientID": "Google OAuth 2.0 Client ID"
+          },
+          "labels": {
+            "autoLoginDescription": "Automatically log in without user interaction.",
+            "dailyReminderDescription": "Receive a daily notification summarizing your tasks.",
+            "notificationsDescription": "Enable or disable browser notifications.",
+            "soundsDescription": "Enable or disable sound effects.",
+            "syncIntervalDescription": "How often to synchronize data with Google Sheets (in minutes).",
+            "googleAPIKeyDescription": "Your Google API Key (required for Google Sheets integration).",
+            "googleClientIDDescription": "Your Google OAuth 2.0 Client ID (required for Google Sheets integration).",
+            "howToGetCredentials": "How to get credentials:",
+            "autoLoginEnabled": "Enabled",
+            "autoLoginDisabled": "Disabled",
+            "dailyReminderEnabled": "Enabled",
+            "dailyReminderDisabled": "Disabled",
+            "dailyReminderTime": "Daily Reminder Time",
+            "reminderMinutesBefore": "Reminder Minutes Before",
+            "notificationsEnabled": "Enabled",
+            "notificationsDisabled": "Disabled",
+            "soundEnabled": "Enabled",
+            "soundDisabled": "Disabled",
+            "syncIntervalMinutes": "Minutes:"
+          },
+          "credentialsSteps": [
+            "Go to <a href=\"https://console.cloud.google.com\" target=\"_blank\">Google Cloud Console</a>",
+            "Create a project",
+            "Enable Google Sheets API and Google Drive API",
+            "Create OAuth 2.0 credentials and an API Key",
+            "Add your domain to authorized JavaScript origins"
+          ]
+        },
+        "credentials": {
+          "title": "Google API Credentials",
+          "message": "Please enter your Google API credentials.",
+          "labels": {
+            "apiKey": "Google API Key",
+            "clientId": "Google OAuth 2.0 Client ID"
+          },
+          "buttons": {
+            "save": "Save Credentials",
+            "cancel": "Cancel"
+          },
+          "errors": {
+            "apiKeyRequired": "Please enter your Google API Key",
+            "clientIdRequired": "Please enter your Google OAuth 2.0 Client ID"
+          }
+        },
+        "authPrompt": {
+          "title": "Google Authentication Required",
+          "message": "Please authenticate to use TaskMaster.",
+          "buttons": {
+            "login": "Login with Google",
+            "skip": "Skip for now"
+          },
+          "checkbox": "Do not require user interaction to log in the future"
+        },
+        "criticalError": {
+          "title": "Critical Error",
+          "message": "A critical error occurred. Please try again later.",
+          "buttons": {
+            "retry": "Retry",
+            "reset": "Reset Application"
+          }
+        },
+        "resetApp": {
+          "title": "Reset Application",
+          "message": "Are you sure you want to reset the application? All data will be lost.",
+          "buttons": {
+            "reset": "Reset",
+            "cancel": "Cancel"
+          }
+        },
+        "confirmDelete": {
+          "title": "Confirm Deletion",
+          "message": "Are you sure you want to delete this?",
+          "buttons": {
+            "delete": "Delete",
+            "cancel": "Cancel"
+          }
+        },
+        "installPrompt": {
+          "title": "Install TaskMaster",
+          "message": "Install TaskMaster for a better experience and offline access",
+          "buttons": {
+            "install": "Install",
+            "later": "Later"
+          },
+          "instructions": {
+            "title": "Installation Instructions",
+            "steps": [
+              "Tap the menu button (⋮) in your browser",
+              "Select \"Add to Home Screen\"",
+              "Tap \"Add\" to confirm"
+            ]
+          }
+        }
+      },
+      "placeholders": {
+        "bonus": "%BONUS%",
+        "level": "%LEVEL%",
+        "title": "%TITLE%",
+        "description": "%DESCRIPTION%"
+      },
+      "priorityLevels": {
+        "p1": "Highest",
+        "p2": "High",
+        "p3": "Medium",
+        "p4": "Low",
+        "p5": "Lowest"
+      },
+      "difficultyLevels": {
+        "d1": "Very Easy",
+        "d2": "Easy",
+        "d3": "Medium",
+        "d4": "Hard",
+        "d5": "Very Hard"
+      },
+      "rarityLevels": {
+        "common": "Common",
+        "uncommon": "Uncommon",
+        "rare": "Rare",
+        "epic": "Epic",
+        "legendary": "Legendary"
+      },
+      "statuses": {
+        "completed": "Completed",
+        "notStarted": "Not Started",
+        "inProgress": "In Progress",
+        "overdue": "Overdue"
+      },
+      "progressTypes": {
+        "simple": "Simple (Done/Not Done)",
+        "incremental": "Percentage (Partial Progress)"
+      },
+      "recurrenceTypes": {
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly"
+      },
+      "emptyStates": {
+        "noTasks": "No tasks available. Add some tasks to get started!",
+        "noCategories": "No categories available. Add some categories to organize your tasks!",
+        "noDailyMissions": "No daily missions available. Generate some missions to get started!",
+        "noAchievementsYet": "No achievements unlocked yet. Complete tasks to unlock achievements!",
+        "noAchievementsUnlocked": "No achievements unlocked yet. Keep working!",
+        "noAchievementsInCategory": "No achievements available in this category."
+      },
+      "successMessages": {
+        "credentialsSaved": "Credentials saved",
+        "setupComplete": "Setup complete",
+        "allMissionsCompleted": "Congratulations! You completed all daily missions and earned a bonus of %BONUS% points!"
+      },
+      "settings": {
+        "title": "Settings",
+        "sections": {
+          "autoLogin": "Auto Login",
+          "dailyReminder": "Daily Reminder",
+          "notifications": "Notifications",
+          "sounds": "Sound Effects",
+          "syncInterval": "Sync Interval",
+          "apiKey": "Google API Key",
+          "clientId": "Google OAuth 2.0 Client ID"
+        },
+        "labels": {
+          "autoLoginDescription": "Automatically log in without user interaction.",
+          "dailyReminderDescription": "Receive a daily notification summarizing your tasks.",
+          "notificationsDescription": "Enable or disable browser notifications.",
+          "soundsDescription": "Enable or disable sound effects.",
+          "syncIntervalDescription": "How often to synchronize data with Google Sheets (in minutes).",
+          "apiKeyDescription": "Your Google API Key (required for Google Sheets integration).",
+          "clientIdDescription": "Your Google OAuth 2.0 Client ID (required for Google Sheets integration).",
+          "howToGetCredentials": "How to get credentials:",
+          "autoLoginEnabled": "Enabled",
+          "autoLoginDisabled": "Disabled",
+          "dailyReminderEnabled": "Enabled",
+          "dailyReminderDisabled": "Disabled",
+          "dailyReminderTime": "Daily Reminder Time",
+          "reminderMinutesBefore": "Reminder Minutes Before",
+          "notificationsEnabled": "Enabled",
+          "notificationsDisabled": "Disabled",
+          "soundEnabled": "Enabled",
+          "soundDisabled": "Disabled",
+          "syncIntervalMinutes": "Minutes:"
+        },
+        "buttons": {
+          "save": "Save Settings",
+          "reset": "Reset to Defaults"
+        },
+        "credentialsSteps": [
+          "Go to <a href=\"https://console.cloud.google.com\" target=\"_blank\">Google Cloud Console</a>",
+          "Create a project",
+          "Enable Google Sheets API and Google Drive API",
+          "Create OAuth 2.0 credentials and an API Key",
+          "Add your domain to authorized JavaScript origins"
+        ]
+      },
+      "daily": {
+        "title": "Daily Missions",
+        "labels": {
+          "streak": "Streak",
+          "pointsEarned": "Points Earned",
+          "missionsCompleted": "Missions Completed",
+          "dailyBonus": "Daily Bonus",
+          "completeAllMissions": "Complete all missions to earn a bonus of %BONUS% points!",
+          "noMissions": "No missions available. Click \"Regenerate Missions\" to create new ones."
+        },
+        "buttons": {
+          "regenerateMissions": "Regenerate Missions"
+        }
+      },
+      "progress": {
+        "title": "Progress",
+        "labels": {
+          "level": "Level",
+          "title": "Title",
+          "totalPoints": "Total Points",
+          "nextLevel": "Next Level",
+          "currentExp": "Current XP",
+          "nextLevelExp": "Next Level XP",
+          "streak": "Streak",
+          "currentStreak": "Current Streak",
+          "longestStreak": "Longest Streak",
+          "completedTasks": "Completed Tasks",
+          "totalExperience": "Total Experience"
+        }
+      },
+      "achievements": {
+        "title": "Achievements",
+        "labels": {
+          "unlockedCount": "Unlocked",
+          "totalCount": "Total",
+          "noAchievements": "No achievements available. Complete tasks to unlock achievements!",
+          "noAchievementsUnlocked": "No achievements unlocked yet. Keep working!",
+          "noAchievementsInCategory": "No achievements available in this category."
+        },
+        "categories": {
+          "all": "All",
+          "unlocked": "Unlocked",
+          "locked": "In Progress"
+        }
+      },
+      "errors": {
+        "generic": {
+          "title": "An Unexpected Error Occurred",
+          "message": "An unexpected error occurred. Please try again later."
+        },
+        "network": {
+          "title": "Network Error",
+          "message": "Network error. Please check your internet connection."
+        },
+        "api": {
+          "title": "API Error",
+          "message": "API error. Please try again later."
+        },
+        "auth": {
+          "title": "Authentication Failed",
+          "message": "Authentication failed. Please check your Google credentials.",
+          "missingCredentials": "Missing Google API credentials. Please update them in the settings.",
+          "invalidCredentials": "Invalid Google API credentials. Please check your credentials and try again."
+        },
+        "storage": {
+          "title": "Storage Error",
+          "message": "Storage error. Please try again later."
+        },
+        "spreadsheet": {
+          "title": "Google Sheets Error",
+          "message": "Error accessing Google Sheets. Please check your Google Sheets permissions and try again.",
+          "initFailed": "Failed to initialize Google Sheets.",
+          "createFailed": "Error creating spreadsheet.",
+          "accessFailed": "Error accessing spreadsheet.",
+          "structureError": "Error ensuring sheet structure."
+        },
+        "task": {
+          "notFound": "Task not found.",
+          "createFailed": "Error creating task.",
+          "updateFailed": "Error updating task.",
+          "deleteFailed": "Error deleting task.",
+          "invalidData": "Invalid task data. Please check your input and try again."
+        },
+        "category": {
+          "notFound": "Category not found.",
+          "createFailed": "Error adding category.",
+          "updateFailed": "Error updating category.",
+          "deleteFailed": "Error deleting category.",
+          "invalidData": "Invalid category data. Please check your input and try again."
+        },
+        "subcategory": {
+          "notFound": "Subcategory not found.",
+          "createFailed": "Error adding subcategory.",
+          "updateFailed": "Error updating subcategory.",
+          "deleteFailed": "Error deleting subcategory.",
+          "invalidData": "Invalid subcategory data. Please check your input and try again."
+        },
+        "achievement": {
+          "notFound": "Achievement not found.",
+          "loadDataFailed": "Error loading achievements data.",
+          "progressError": "Error calculating achievement progress."
+        },
+        "dailyMission": {
+          "notFound": "Daily mission not found.",
+          "loadDataFailed": "Error loading daily missions data.",
+          "generateFailed": "Error generating daily missions.",
+          "updateFailed": "Error updating mission status.",
+          "pointsError": "Error calculating mission points."
+        },
+        "user": {
+          "profileError": "Error loading or saving user profile.",
+          "pointsError": "Error awarding task points.",
+          "streakError": "Error updating streak."
+        },
+        "sync": {
+          "failed": "Error syncing data. Please try again later.",
+          "tasksFailed": "Error syncing tasks.",
+          "categoriesFailed": "Error syncing categories.",
+          "profileFailed": "Error syncing user profile.",
+          "settingsFailed": "Error syncing settings."
+        },
+        "notification": {
+          "error": "Error showing notification. Please check your browser settings."
+        },
+        "sound": {
+          "error": "Error playing sound. Please check your browser settings."
+        }
+      }
+    }
+}  

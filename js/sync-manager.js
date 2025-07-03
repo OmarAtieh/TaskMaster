@@ -212,6 +212,9 @@ async loadGoogleApi() {
         this.CLIENT_ID = this.CLIENT_ID || await this.storage.get("google_client_id");
         this.API_KEY = this.API_KEY || await this.storage.get("google_api_key");
 
+        console.log("Retrieved Client ID:", this.CLIENT_ID);
+        console.log("Retrieved API Key:", this.API_KEY);
+
         if (!this.CLIENT_ID || this.CLIENT_ID.trim() === "" || !this.API_KEY || this.API_KEY.trim() === "") {
             console.error("Google Client ID or API Key is missing. Prompting user for input.");
             this.app.showCredentialEntryScreen();
@@ -231,23 +234,24 @@ async loadGoogleApi() {
             &include_granted_scopes=true
             &prompt=consent`;
 
-        console.log("Redirecting user to OAuth:", authUrl);
+        console.log("Authorization URL:", authUrl);
 
         // Full-page redirect instead of pop-up
         window.location.href = authUrl;
 
         return { success: false, reason: "auth_redirect", message: "Redirecting to Google for authentication." };
 
-    }  catch (error) {
-          console.error("Authentication failed:", error);
-          this.app.storage.set("auto_login", "false"); // Reset auto-login on error
-          this.app.ui.showAuthError("Authentication failed. Please try again.", () => {
-          this.app.ui.showAuthPrompt(() => this.authorize());
-      });
+    } catch (error) {
+        console.error("Authentication failed:", error);
+        this.app.storage.set("auto_login", "false"); // Reset auto-login on error
+        this.app.ui.showAuthError("Authentication failed. Please try again.", () => {
+            this.app.ui.showAuthPrompt(() => this.authorize());
+        });
 
         return { success: false, reason: "auth_error", message: error.message || "Unknown error" };
     }
 }
+
 
   //Clears only OAuth-related credentials and retries authentication.
   clearOAuthCredentialsAndRetry() {

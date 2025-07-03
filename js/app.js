@@ -1,30 +1,31 @@
 // app.js - Main Application Entry Point
 const APP_VERSION = '0.0.5'; // Increment this with each change
-const BUILD_DATE = '2025-03-10';
-const BUILD_NUMBER = '19'; // Can be incremented with each build
+const BUILD_DATE = '2025-07-03';
+const BUILD_NUMBER = '20'; // Can be incremented with each build
+const environment = process.env.NODE_ENV || 'dev'; // Default to 'dev' if not set
+const config = require('./config.json')[environment]; // Load environment-specific config
+import { loadTranslations } from './translation-utils.js';
 
 document.addEventListener('DOMContentLoaded', () => {
-    const app = new TaskMasterApp();
+const app = new QuestifyApp();
 });
 
-class TaskMasterApp {
+class QuestifyApp {
     constructor() {
         this.config = {
-            appName: 'TaskMaster',
+            appName: 'Questify',
             version: '1.0.0',
-            gSheetName: 'TaskMaster-Data',
+            gSheetName: 'Questify-Data',
             syncIntervalMinutes: 5,
             notificationsEnabled: true,
             theme: 'auto', // 'light', 'dark', or 'auto'
             titleTheme: 'fantasy', // 'fantasy', 'professional', 'academic', etc.
             soundEnabled: true
         };
-        
         // State
         this.initialized = false;
         this.online = navigator.onLine;
         this.syncPending = false;
-        
         // Initialize modules
         this.initializeApp();
     }
@@ -32,15 +33,13 @@ class TaskMasterApp {
     logAppVersion() {
         // Log version info to console
         console.log(
-          `%c TaskMaster v${APP_VERSION} (Build #${BUILD_NUMBER} - ${BUILD_DATE}) %c`,
+          `%c Questify v${APP_VERSION} (Build #${BUILD_NUMBER} - ${BUILD_DATE}) %c`,
           'background: #4a6fa5; color: white; padding: 5px; border-radius: 3px; font-weight: bold;',
           'color: #4a6fa5;'
         );
-        
         // Log environment details
         console.log(`Running on: ${navigator.userAgent}`);
         console.log(`PWA installed: ${window.matchMedia('(display-mode: standalone)').matches ? 'Yes' : 'No'}`);
-        
         // Ensure the version is displayed in the UI
         const versionDisplay = document.getElementById('version-display');
         if (versionDisplay) {
@@ -329,53 +328,75 @@ class TaskMasterApp {
           console.error('Error checking resume actions:', error);
         }
       }
+
+
+      
     
       async initializeApp() {
         try {
+            const userLocale = navigator.language || 'en'; // Get user's preferred locale
+            this.translations = await loadTranslations(userLocale);
             console.log("Initializing application...");
+            await this.initializeStorage();
+            await this.initializeUI();
+            await this.loadCredentials();
+            await this.initializeModules();
+            await this.startApplication();
+        } catch (error) {
+            console.error("Critical initialization error:", error);
+            this.ui.showStartError(error); 
+        }
+    }
     
+    async initializeStorage() {
+        try {
             this.storage = new StorageManager();
+            console.log("Initializing storage manager...");
             await this.storage.initialize();
+            console.log("Storage manager initialized.");
+        } catch (error) {
+            console.error("Error initializing storage:", error);
+            throw new Error("Failed to initialize local storage. Please check browser settings.");
+        }
+    }
     
-            // Ensure UIManager is initialized early
+    async initializeUI() {
+        try {
             this.ui = new UIManager(this);
+            console.log("UI manager initialized.");
+            this.ensureUIMethodsExist(); // Ensure essential UI methods exist
+        } catch (error) {
+            console.error("Error initializing UI:", error);
+            throw new Error("Failed to initialize UI elements. Please refresh the page.");
+        }
+    }
     
-            // Retrieve stored credentials
+    async loadCredentials() {
+        try {
             this.CLIENT_ID = await this.storage.get("google_client_id");
             this.API_KEY = await this.storage.get("google_api_key");
-            this.AUTO_LOGIN = await this.storage.get("auto_login") === "true"; // Check if auto-login is enabled
-    
+            this.AUTO_LOGIN = await this.storage.get("auto_login") === "true";
+
             console.log("Retrieved Client ID:", this.CLIENT_ID);
             console.log("Retrieved API Key:", this.API_KEY);
             console.log("Auto-login enabled:", this.AUTO_LOGIN);
-    
-            // Ensure valid credentials are present
-            if (!this.CLIENT_ID || !this.API_KEY || this.CLIENT_ID.trim() === "" || this.API_KEY.trim() === "") {
-                console.warn("Google API credentials missing. Prompting user for input.");
-                return this.ui.showCredentialEntryScreen();
-            }
-    
-            console.log("Credentials validated. Waiting for user authentication...");
-    
-            // If auto-login is enabled, attempt authentication immediately
-            if (this.AUTO_LOGIN) {
-                console.log("Auto-login is enabled. Attempting authentication...");
-                this.sync.authorize();
-            } else {
-              console.log("Auto-login is disabled. Waiting for user authentication...");
 
-              // Do not trigger authentication automatically
-                this.ui.showAuthPrompt((userWantsToAuthenticate) => {
-                  if (userWantsToAuthenticate) {
-                      console.log("User clicked authenticate...");
-                      this.sync.authorize();
-                  } else {
-                      console.log("User chose not to authenticate. Awaiting user action.");
-                  }
-              });
-              
+            // Google credentials are now optional. Only warn, don't block app startup.
+            if (!this.CLIENT_ID || this.CLIENT_ID.trim() === "" || !this.API_KEY || this.API_KEY.trim() === "") {
+                console.warn("Google API credentials missing. Drive sync/backup will be disabled until linked.");
+                this.googleLinked = false;
+            } else {
+                this.googleLinked = true;
             }
+        } catch (error) {
+            console.error("Error loading credentials:", error);
+            // Credentials are optional, so don't throw
+            this.googleLinked = false;
+        }
+    }
     
+    async initializeModules() {
+        try {
             this.preferences = await this.loadPreferences();
             this.graphics = new UIGraphics(this.preferences.theme);
             this.sound = new SoundEffects();
@@ -386,23 +407,27 @@ class TaskMasterApp {
             this.gamification = new GamificationSystem(this);
             this.taskForm = new TaskForm(this);
             this.dailyMissions = new DailyMissionManager(this);
+            console.log("Application modules initialized.");
+        } catch (error) {
+            console.error("Error initializing modules:", error);
+            throw new Error("Failed to initialize application modules. Please refresh the page.");
+        }
+    }
     
+    async startApplication() {
+        try {
             const isFirstRun = !(await this.storage.get("app_initialized"));
             if (isFirstRun) {
                 await this.firstTimeSetup();
             } else {
                 await this.normalStartup();
             }
-    
         } catch (error) {
-            console.error("Initialization failed:", error);
-            this.storage.set("auto_login", "false"); // Reset auto-login on failure
-            this.ui.showAuthError(
-                "Initialization failed. Click retry to re-enter credentials.",
-                () => this.ui.showCredentialEntryScreen()
-            );
+            console.error("Error starting application:", error);
+            throw error;
         }
     }
+    
     
     
     
@@ -454,40 +479,36 @@ class TaskMasterApp {
     
     async firstTimeSetup() {
         try {
-          // Show simple onboarding UI
+          // Show onboarding UI
           this.ui.showOnboarding();
-          
-          // Wait for Google authorization
-          const authResult = await this.sync.authorize();
-          
-          // If authorization failed, handle appropriately
-          if (!authResult.success) {
-            if (authResult.reason === 'missing_credentials') {
-              this.ui.showCredentialsForm();
-            } else {
+
+          // Google linking is optional. Only attempt if credentials are present.
+          let googleSetupSuccess = false;
+          if (this.googleLinked) {
+            // Wait for Google authorization
+            const authResult = await this.sync.authorize();
+            if (!authResult.success) {
               this.ui.showAuthError(authResult.message, () => this.firstTimeSetup());
+              return;
             }
-            return;
+            // Initialize Google Sheet structure
+            const sheetResult = await this.sync.initializeSheets();
+            if (!sheetResult.success) {
+              this.ui.showSheetsInitError(sheetResult.message, () => this.firstTimeSetup());
+              return;
+            }
+            googleSetupSuccess = true;
           }
-          
-          // Initialize Google Sheet structure
-          const sheetResult = await this.sync.initializeSheets();
-          
-          // If sheet initialization failed, handle appropriately
-          if (!sheetResult.success) {
-            this.ui.showSheetsInitError(sheetResult.message, () => this.firstTimeSetup());
-            return;
-          }
-          
+
           // Create default categories
           await this.categories.createDefaultCategories();
-          
+
           // Complete setup
           await this.storage.set('app_initialized', true);
-          
+
           // Start app normally
           await this.normalStartup();
-          
+
           // Show PWA installation prompt if appropriate
           this.checkForPWAInstall();
         } catch (error) {
@@ -501,31 +522,26 @@ class TaskMasterApp {
         try {
             // Ensure UI methods before checking resume actions
             this.ensureUIMethodsExist();
-            
             // Check for resume actions
             await this.checkResumeActions();
-            
-            // Rest of normal startup...
-            this.showLoadingMessage('Checking authorization...');
-            // Check for resume actions first
-            await this.checkResumeActions();
-            this.showLoadingMessage('Checking authorization...');
-    
-            // Try to authorize
-            const authResult = await this.sync.authorize();
-            
-            // If not authorized due to missing credentials, show the credentials form
-            if (!authResult.success && authResult.reason === 'missing_credentials') {
-            this.ui.showCredentialsForm();
-            return;
+            // Show loading screen with rotating motivational quotes
+            this.showLoadingScreenWithQuotes();
+
+            // If Google is linked, try to authorize, else skip
+            let authResult = { success: false };
+            if (this.googleLinked) {
+                this.showLoadingMessage('Checking authorization...');
+                authResult = await this.sync.authorize();
+                if (!authResult.success && authResult.reason === 'missing_credentials') {
+                    this.ui.showCredentialsForm();
+                    return;
+                }
+                if (!authResult.success) {
+                    this.showErrorScreen('Authorization Failed', authResult.message, () => this.normalStartup());
+                    return;
+                }
             }
-            
-            // If not authorized for some other reason, show error
-            if (!authResult.success) {
-            this.showErrorScreen('Authorization Failed', authResult.message, () => this.normalStartup());
-            return;
-            }
-            
+
             this.showLoadingMessage('Loading data...');
             // Load data (in parallel for speed)
             await Promise.all([
@@ -533,28 +549,90 @@ class TaskMasterApp {
                 this.categories.loadCategories(),
                 this.gamification.loadUserProfile()
             ]);
-            
-            // Start sync if online
-            if (this.online) {
+
+            // Start sync if online and Google is linked
+            if (this.online && this.googleLinked) {
                 this.sync.startPeriodicSync();
             }
-            
+
             // Setup notifications
             if (this.preferences.notificationsEnabled) {
                 await this.notifications.setupNotifications();
             }
-            
+
             // Render main UI
             this.ui.renderMainApp();
-            
+
             // Mark as initialized
             this.initialized = true;
-            
+
             // Check for pending notifications
             this.notifications.checkPendingNotifications();
         } catch (error) {
             console.error('Normal startup failed:', error);
             this.showErrorScreen('Startup failed', error.message);
+        }
+    }
+    showLoadingScreenWithQuotes() {
+        // Motivational quotes array
+        const quotes = [
+            "Every quest begins with a single step.",
+            "Small actions every day lead to great achievements.",
+            "Stay focused on your journey, not the destination.",
+            "Progress, not perfection.",
+            "Your future is created by what you do today, not tomorrow.",
+            "Success is the sum of small efforts repeated day in and day out.",
+            "You are the hero of your own story.",
+            "Great things never come from comfort zones.",
+            "Dream big. Start small. Act now.",
+            "The secret of getting ahead is getting started."
+        ];
+        let current = 0;
+        let loadingScreen = document.getElementById('loading-screen');
+        if (!loadingScreen) {
+            loadingScreen = document.createElement('div');
+            loadingScreen.id = 'loading-screen';
+            loadingScreen.style.position = 'fixed';
+            loadingScreen.style.top = '0';
+            loadingScreen.style.left = '0';
+            loadingScreen.style.width = '100vw';
+            loadingScreen.style.height = '100vh';
+            loadingScreen.style.background = 'linear-gradient(135deg, #4a6fa5 0%, #121212 100%)';
+            loadingScreen.style.display = 'flex';
+            loadingScreen.style.flexDirection = 'column';
+            loadingScreen.style.justifyContent = 'center';
+            loadingScreen.style.alignItems = 'center';
+            loadingScreen.style.zIndex = '9999';
+            loadingScreen.innerHTML = `
+                <div style="font-size:2.5rem;font-weight:bold;color:#fff;letter-spacing:2px;margin-bottom:1.5rem;">Questify</div>
+                <div id="loading-quote" style="font-size:1.3rem;color:#fff;text-align:center;max-width:80vw;"></div>
+                <div class="spinner" style="margin-top:2rem;width:48px;height:48px;border:6px solid #fff;border-top:6px solid #4a6fa5;border-radius:50%;animation:spin 1s linear infinite;"></div>
+                <style>@keyframes spin{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}</style>
+            `;
+            document.body.appendChild(loadingScreen);
+        }
+        const quoteEl = loadingScreen.querySelector('#loading-quote');
+        function showQuote(idx) {
+            if (quoteEl) quoteEl.textContent = quotes[idx];
+        }
+        showQuote(current);
+        // Rotate every 6 seconds
+        let interval = setInterval(() => {
+            current = (current + 1) % quotes.length;
+            showQuote(current);
+        }, 6000);
+        // Remove loading screen after main UI is rendered
+        const removeLoading = () => {
+            clearInterval(interval);
+            if (loadingScreen && loadingScreen.parentNode) {
+                loadingScreen.parentNode.removeChild(loadingScreen);
+            }
+        };
+        // Attach to UIManager so it can be removed after renderMainApp
+        if (this.ui) {
+            this.ui.removeLoadingScreen = removeLoading;
+        } else {
+            setTimeout(removeLoading, 12000); // Fallback: remove after 12s
         }
     }
     
@@ -600,10 +678,15 @@ class TaskMasterApp {
     showLoadingMessage(message) {
         const loadingScreen = document.getElementById('loading-screen');
         if (loadingScreen) {
-            const messageEl = loadingScreen.querySelector('p');
-            if (messageEl) {
-                messageEl.textContent = message;
+            let messageEl = loadingScreen.querySelector('#loading-message');
+            if (!messageEl) {
+                messageEl = document.createElement('div');
+                messageEl.id = 'loading-message';
+                messageEl.style.color = '#fff';
+                messageEl.style.marginTop = '1rem';
+                loadingScreen.appendChild(messageEl);
             }
+            messageEl.textContent = message;
         }
     }
     
@@ -616,7 +699,9 @@ class TaskMasterApp {
                 ${retryCallback ? '<button id="retry-button">Try Again</button>' : ''}
             </div>
         `;
-        
+        if (this.ui && this.ui.removeLoadingScreen) {
+            this.ui.removeLoadingScreen();
+        }
         if (retryCallback) {
             document.getElementById('retry-button').addEventListener('click', retryCallback);
         }
