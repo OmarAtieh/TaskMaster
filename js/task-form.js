@@ -44,7 +44,8 @@ class TaskForm {
         this.showForm(task);
       } catch (error) {
         console.error('Error loading task for edit:', error);
-        alert('Could not load task: ' + error.message);
+        // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Error message', 'error'))
+        // alert('Could not load task: ' + error.message);
       }
     }
     
@@ -89,7 +90,8 @@ class TaskForm {
           this.initializeDetailsControls(task);
         } catch (error) {
           console.error('Error loading task details:', error);
-          alert('Could not load task details: ' + error.message);
+          // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Error message', 'error'))
+          // alert('Could not load task details: ' + error.message);
         }
       }
       
@@ -323,7 +325,8 @@ class TaskForm {
             }
             } catch (error) {
             console.error('Error completing task:', error);
-            alert('Error completing task: ' + error.message);
+            // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Error message', 'error'))
+            // alert('Error completing task: ' + error.message);
             }
         });
         }
@@ -361,7 +364,8 @@ class TaskForm {
           }
         } catch (error) {
           console.error('Error deleting task:', error);
-          alert('Error deleting task: ' + error.message);
+          // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Error message', 'error'))
+          // alert('Error deleting task: ' + error.message);
         }
       }
       
@@ -657,7 +661,8 @@ class TaskForm {
         
         // Validate required fields
         if (!formData.title.trim()) {
-          alert('Please enter a task title');
+          // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Error message', 'error'))
+          // alert('Please enter a task title');
           return;
         }
         
@@ -695,11 +700,18 @@ class TaskForm {
         if (this.app.sound && this.app.preferences.soundEnabled) {
           this.app.sound.play('click');
         }
+
+        if (this.isEdit) {
+          console.log(`TaskForm: Task ${task.id} updated. UI should ideally highlight this task.`);
+        } else {
+          console.log(`TaskForm: Task ${task.id} created. UI should ideally highlight this new task.`);
+        }
         
         return task;
       } catch (error) {
         console.error('Error saving task:', error);
-        alert('Error saving task: ' + error.message);
+        // TODO: Implement non-blocking user notification (e.g., this.app.ui.showNotification('Error message', 'error'))
+        // alert('Error saving task: ' + error.message);
       }
     }
     

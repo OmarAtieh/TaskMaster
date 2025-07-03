@@ -283,6 +283,17 @@ class QuestifyApp {
                 // Continue with spreadsheet creation
                 try {
                   console.log('Resuming spreadsheet creation...');
+                  // Defensive check for token availability after redirect
+                  if (!this.sync.isAuthorized && !(this.sync.gapi && this.sync.gapi.client && this.sync.gapi.client.getToken())) {
+                    console.warn('Token not available after redirect in checkResumeActions, attempting re-auth or showing error');
+                    // Optionally, trigger re-authentication or show an error to the user
+                    // For example:
+                    // this.ui.showAuthError("Authentication token was not found after redirect. Please try signing in again.", () => this.sync.authorize());
+                    // return; 
+                    // Depending on desired UX, you might allow initializeSheets to proceed, 
+                    // as it has its own auth checks, or handle it more directly here.
+                    // For now, logging and allowing initializeSheets to handle it as it might attempt re-auth.
+                  }
                   const sheetResult = await this.sync.initializeSheets();
                   console.log('Sheet initialization result:', sheetResult);
                   
@@ -503,18 +514,28 @@ class QuestifyApp {
           // Create default categories
           await this.categories.createDefaultCategories();
 
-          // Complete setup
-          await this.storage.set('app_initialized', true);
+          // Complete setup - This will now likely be called by UIManager.hideOnboarding() or app.completeSetup()
+          // await this.storage.set('app_initialized', true); 
 
-          // Start app normally
-          await this.normalStartup();
+          // Start app normally - This will also be triggered after onboarding is complete.
+          // await this.normalStartup(); 
 
-          // Show PWA installation prompt if appropriate
-          this.checkForPWAInstall();
+          // Show PWA installation prompt if appropriate - This can also be part of onboarding or called after.
+          // this.checkForPWAInstall();
+
+          // Error handling remains important, though some errors might be caught within OnboardingView/UIManager
         } catch (error) {
           console.error('First-time setup failed:', error);
           // Show a user-friendly error with options
-          this.ui.showSetupOptionsError(error, () => this.firstTimeSetup());
+          // This error handling might need adjustment depending on how onboarding flow manages errors.
+          if (this.ui && this.ui.showSetupOptionsError) {
+            this.ui.showSetupOptionsError(error, () => this.firstTimeSetup());
+          } else if (this.showErrorScreen) { // Fallback if ui.showSetupOptionsError is not available
+            this.showErrorScreen('Setup Failed', error.message, () => this.firstTimeSetup());
+          } else {
+            // Basic fallback
+            alert(`Critical setup error: ${error.message}. Please reload the application.`);
+          }
         }
       }
     
